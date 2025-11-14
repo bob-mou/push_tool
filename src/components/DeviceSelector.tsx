@@ -14,15 +14,15 @@ export function DeviceSelector() {
   const refreshDevices = async () => {
     setIsRefreshing(true);
     try {
-      // 检查ADB和iOS工具可用性
-      const [adbAvailable, iosToolsAvailable] = await Promise.all([
-        window.electronAPI.checkADB(),
-        window.electronAPI.checkIOSTools()
-      ]);
-      
-      console.log('工具可用性:', { adbAvailable, iosToolsAvailable });
-      
-      const deviceList = await window.electronAPI.getDevices();
+      const hasElectron = typeof window !== 'undefined' && (window as any).electronAPI;
+      if (hasElectron) {
+        const api = (window as any).electronAPI;
+        await Promise.all([
+          api.checkADB?.(),
+          api.checkIOSTools?.()
+        ]);
+      }
+      const deviceList = hasElectron ? await (window as any).electronAPI.getDevices() : [];
       setDevices(deviceList);
       
       // 如果没有选中设备且有可用设备，自动选择第一个
@@ -42,7 +42,7 @@ export function DeviceSelector() {
   };
 
   return (
-    <div className="relative flex items-center space-x-2">
+    <div className="relative flex items-center space-x-2 electron-no-drag">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"

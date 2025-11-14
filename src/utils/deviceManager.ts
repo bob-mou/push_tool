@@ -134,15 +134,71 @@ export class DeviceManager {
   // 推送文件到Android设备
   async pushFileToAndroid(deviceId: string, localPath: string, remotePath: string): Promise<void> {
     try {
-      // 首先创建远程目录
-      await execPromise(`adb -s ${deviceId} shell mkdir -p "${remotePath}"`);
+      // 标准化路径，处理Windows路径分隔符
+      let normalizedLocalPath = localPath.replace(/\\/g, '/');
+      if (!path.isAbsolute(normalizedLocalPath)) {
+        normalizedLocalPath = path.resolve(process.cwd(), normalizedLocalPath).replace(/\\/g, '/');
+      }
+      
+      // 检查文件路径是否存在（避免编码错误）
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(normalizedLocalPath)) {
+          throw new Error(`文件不存在: ${normalizedLocalPath}`);
+        }
+      } catch (checkError) {
+        console.error('文件检查失败:', checkError);
+        throw new Error(`无法访问文件: ${normalizedLocalPath}`);
+      }
+      
+      // 验证Android路径格式
+      if (!remotePath.startsWith('/sdcard/') && !remotePath.startsWith('/storage/')) {
+        throw new Error('Android路径必须以/sdcard/或/storage/开头');
+      }
+      
+      // 首先创建远程目录（支持自动创建）
+      const mkdirCommand = `adb -s ${deviceId} shell mkdir -p "${remotePath}"`;
+      console.log(`创建远程目录: ${mkdirCommand}`);
+      await execPromise(mkdirCommand);
+      
+      // 验证目录创建成功
+      const checkDirCommand = `adb -s ${deviceId} shell ls -la "${remotePath}"`;
+      try {
+        await execPromise(checkDirCommand);
+        console.log(`远程目录验证成功: ${remotePath}`);
+      } catch (dirError) {
+        console.warn(`远程目录验证警告: ${dirError}`);
+      }
       
       // 推送文件
-      const fileName = path.basename(localPath);
-      const targetPath = `${remotePath}/${fileName}`;
-      await execPromise(`adb -s ${deviceId} push "${localPath}" "${targetPath}"`);
+      const fileName = path.basename(normalizedLocalPath);
+      const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
       
-      console.log(`文件推送成功: ${localPath} -> ${targetPath}`);
+      console.log(`开始推送文件: ${normalizedLocalPath} -> ${targetPath}`);
+      
+      // 检查目标文件是否已存在
+      const checkFileCommand = `adb -s ${deviceId} shell ls "${targetPath}" 2>/dev/null`;
+      try {
+        await execPromise(checkFileCommand);
+        console.log(`目标文件已存在，将覆盖: ${targetPath}`);
+      } catch {
+        // 文件不存在，正常推送
+      }
+      
+      const pushCommand = `adb -s ${deviceId} push "${normalizedLocalPath}" "${targetPath}"`;
+      await execPromise(pushCommand);
+      
+      console.log(`文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
+      
+      // 验证文件推送结果
+      const verifyCommand = `adb -s ${deviceId} shell ls -la "${targetPath}"`;
+      try {
+        const verifyResult = await execPromise(verifyCommand);
+        console.log(`文件验证成功: ${verifyResult.stdout}`);
+      } catch (verifyError) {
+        console.warn(`文件验证警告: ${verifyError}`);
+      }
+      
     } catch (error) {
       console.error('Android文件推送失败:', error);
       throw new Error(`推送失败: ${(error as any).message}`);
@@ -150,17 +206,61 @@ export class DeviceManager {
   }
 
   // 推送文件到iOS设备
-  async pushFileToIOS(_deviceId: string, localPath: string, remotePath: string): Promise<void> {
+  async pushFileToIOS(deviceId: string, localPath: string, remotePath: string): Promise<void> {
     try {
-      // 使用idevicefs或类似的工具推送文件
-      // 注意：这需要额外的iOS工具支持
-      const fileName = path.basename(localPath);
-      const targetPath = `${remotePath}/${fileName}`;
+      // 标准化路径，处理Windows路径分隔符
+      let normalizedLocalPath = localPath.replace(/\\/g, '/');
+      if (!path.isAbsolute(normalizedLocalPath)) {
+        normalizedLocalPath = path.resolve(process.cwd(), normalizedLocalPath).replace(/\\/g, '/');
+      }
       
-      // 这里使用afc2服务（需要越狱）或house arrest服务
-      await execPromise(`idevicefs put "${localPath}" "${targetPath}"`);
+      // 检查文件路径是否存在
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(normalizedLocalPath)) {
+          throw new Error(`文件不存在: ${normalizedLocalPath}`);
+        }
+      } catch (checkError) {
+        console.error('文件检查失败:', checkError);
+        throw new Error(`无法访问文件: ${normalizedLocalPath}`);
+      }
       
-      console.log(`iOS文件推送成功: ${localPath} -> ${targetPath}`);
+      // 验证iOS路径格式
+      if (!remotePath.startsWith('/Documents/') && !remotePath.startsWith('/Library/')) {
+        throw new Error('iOS路径必须以/Documents/或/Library/开头');
+      }
+      
+      // 首先创建远程目录
+      const mkdirCommand = `idevicefs -u ${deviceId} mkdir "${remotePath}"`;
+      console.log(`创建iOS远程目录: ${mkdirCommand}`);
+      try {
+        await execPromise(mkdirCommand);
+      } catch (mkdirError) {
+        // 目录可能已存在，继续执行
+        console.log(`目录可能已存在: ${mkdirError}`);
+      }
+      
+      // 推送文件
+      const fileName = path.basename(normalizedLocalPath);
+      const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
+      
+      console.log(`开始推送iOS文件: ${normalizedLocalPath} -> ${targetPath}`);
+      
+      // 使用idevicefs推送文件
+      const pushCommand = `idevicefs -u ${deviceId} put "${normalizedLocalPath}" "${targetPath}"`;
+      await execPromise(pushCommand);
+      
+      console.log(`iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
+      
+      // 验证文件推送结果
+      const verifyCommand = `idevicefs -u ${deviceId} ls "${targetPath}"`;
+      try {
+        const verifyResult = await execPromise(verifyCommand);
+        console.log(`iOS文件验证成功: ${verifyResult.stdout}`);
+      } catch (verifyError) {
+        console.warn(`iOS文件验证警告: ${verifyError}`);
+      }
+      
     } catch (error) {
       console.error('iOS文件推送失败:', error);
       throw new Error(`iOS推送失败: ${(error as any).message}`);

@@ -17,8 +17,10 @@ const isDev = process.env.NODE_ENV === 'development';
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 560,
+    height: 360,
+    frame: false,
+    resizable: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -47,6 +49,11 @@ function createWindow() {
     event.preventDefault();
     mainWindow?.hide();
   });
+
+  // 隐藏菜单栏并保留窗口阴影
+  Menu.setApplicationMenu(null);
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.setHasShadow(true);
 }
 
 function createTray() {
@@ -165,6 +172,30 @@ ipcMain.handle('select-file', async () => {
   });
   
   return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('open-help', async () => {
+  const helpWin = new BrowserWindow({
+    width: 532,
+    height: 360,
+    useContentSize: true,
+    resizable: true,
+    minimizable: true,
+    fullscreenable: false,
+    parent: mainWindow ?? undefined,
+    modal: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+  if (isDev) {
+    helpWin.loadURL('http://localhost:5173/#/help');
+  } else {
+    helpWin.loadFile(path.join(__dirname, '../dist/index.html'), { hash: 'help' });
+  }
 });
 
 app.whenReady().then(() => {

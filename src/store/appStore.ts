@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface Device {
   id: string;
@@ -12,6 +13,9 @@ export interface TransferProgress {
   progress: number;
   status: 'uploading' | 'completed' | 'error';
   error?: string;
+  speedMbps?: number;
+  etaSeconds?: number;
+  targetPath?: string;
 }
 
 interface AppState {
@@ -19,9 +23,13 @@ interface AppState {
   selectedDevice: Device | null;
   isTransferring: boolean;
   transferProgress: TransferProgress | null;
+  transferQueue?: { fileName: string; filePath: string }[];
   settings: {
     autoStart: boolean;
     notifications: boolean;
+    adbPath?: string;
+    iosToolsPath?: string;
+    saveDir?: string;
   };
   
   // Actions
@@ -29,24 +37,39 @@ interface AppState {
   setSelectedDevice: (device: Device | null) => void;
   setTransferring: (transferring: boolean) => void;
   setTransferProgress: (progress: TransferProgress | null) => void;
+  enqueueTransfers?: (items: { fileName: string; filePath: string }[]) => void;
+  dequeueTransfer?: () => void;
   updateSettings: (settings: Partial<AppState['settings']>) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
-  devices: [],
-  selectedDevice: null,
-  isTransferring: false,
-  transferProgress: null,
-  settings: {
-    autoStart: true,
-    notifications: true,
-  },
-  
-  setDevices: (devices) => set({ devices }),
-  setSelectedDevice: (selectedDevice) => set({ selectedDevice }),
-  setTransferring: (isTransferring) => set({ isTransferring }),
-  setTransferProgress: (transferProgress) => set({ transferProgress }),
-  updateSettings: (newSettings) => set((state) => ({
-    settings: { ...state.settings, ...newSettings }
-  })),
-}));
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      devices: [],
+      selectedDevice: null,
+      isTransferring: false,
+      transferProgress: null,
+      transferQueue: [],
+      settings: {
+        autoStart: true,
+        notifications: true,
+        adbPath: '',
+        iosToolsPath: '',
+        saveDir: ''
+      },
+      setDevices: (devices) => set({ devices }),
+      setSelectedDevice: (selectedDevice) => set({ selectedDevice }),
+      setTransferring: (isTransferring) => set({ isTransferring }),
+      setTransferProgress: (transferProgress) => set({ transferProgress }),
+      enqueueTransfers: (items) => set((state) => ({ transferQueue: [...(state.transferQueue || []), ...items] })),
+      dequeueTransfer: () => set((state) => ({ transferQueue: (state.transferQueue || []).slice(1) })),
+      updateSettings: (newSettings) => set((state) => ({
+        settings: { ...state.settings, ...newSettings }
+      })),
+    }),
+    {
+      name: 'file-tool-settings',
+      partialize: (state) => ({ settings: state.settings }),
+    }
+  )
+);

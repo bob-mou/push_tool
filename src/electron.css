@@ -1,0 +1,16 @@
+/* Electron frameless window drag regions */
+.electron-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.electron-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* Ensure buttons and interactive elements are not draggable */
+button, input, select, textarea, a, [role="button"] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}

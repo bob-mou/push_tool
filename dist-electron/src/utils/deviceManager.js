@@ -16,7 +16,7 @@ export class DeviceManager {
             const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices'));
             const devices = [];
             for (const line of lines) {
-                const [deviceId, status] = line.split('\t');
+                const [deviceId, status] = line.split(/\s+/);
                 if (deviceId && status === 'device') {
                     try {
                         // 获取设备详细信息
@@ -53,7 +53,7 @@ export class DeviceManager {
     async getIOSDevices() {
         try {
             const { stdout } = await execPromise('idevice_id -l');
-            const deviceIds = stdout.split('\n').filter(id => id.trim());
+            const deviceIds = stdout.split('\n').filter(id => id.trim()).map(id => id.trim());
             const devices = [];
             for (const deviceId of deviceIds) {
                 try {
@@ -113,13 +113,19 @@ export class DeviceManager {
     // 推送文件到Android设备
     async pushFileToAndroid(deviceId, localPath, remotePath) {
         try {
-            // 首先创建远程目录
+            let normalizedPath = localPath.replace(/\\/g, '/');
+            if (!path.isAbsolute(normalizedPath)) {
+                normalizedPath = path.resolve(process.cwd(), normalizedPath).replace(/\\/g, '/');
+            }
+            const fs = await import('fs');
+            if (!fs.existsSync(normalizedPath)) {
+                throw new Error(`文件不存在: ${normalizedPath}`);
+            }
             await execPromise(`adb -s ${deviceId} shell mkdir -p "${remotePath}"`);
-            // 推送文件
-            const fileName = path.basename(localPath);
-            const targetPath = `${remotePath}/${fileName}`;
-            await execPromise(`adb -s ${deviceId} push "${localPath}" "${targetPath}"`);
-            console.log(`文件推送成功: ${localPath} -> ${targetPath}`);
+            const fileName = path.basename(normalizedPath);
+            const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
+            await execPromise(`adb -s ${deviceId} push -a "${normalizedPath}" "${targetPath}"`);
+            console.log(`文件推送成功: ${normalizedPath} -> ${targetPath}`);
         }
         catch (error) {
             console.error('Android文件推送失败:', error);
@@ -129,12 +135,44 @@ export class DeviceManager {
     // 推送文件到iOS设备
     async pushFileToIOS(_deviceId, localPath, remotePath) {
         try {
-            // 使用idevicefs或类似的工具推送文件
-            // 注意：这需要额外的iOS工具支持
+            // 检查是否有可用的iOS文件传输工具
+            const tools = ['idevicefs', 'ifuse', 'afc2-client'];
+            let availableTool = null;
+            
+            for (const tool of tools) {
+                try {
+                    await execPromise(`which ${tool}`);
+                    availableTool = tool;
+                    break;
+                } catch {
+                    // Tool not available, continue checking
+                }
+            }
+            
+            if (!availableTool) {
+                throw new Error('未找到可用的iOS文件传输工具。请安装 idevicefs, ifuse 或 afc2-client。');
+            }
+            
             const fileName = path.basename(localPath);
             const targetPath = `${remotePath}/${fileName}`;
-            // 这里使用afc2服务（需要越狱）或house arrest服务
-            await execPromise(`idevicefs put "${localPath}" "${targetPath}"`);
+            
+            // 根据可用工具选择不同的命令
+            let command;
+            switch (availableTool) {
+                case 'idevicefs':
+                    command = `idevicefs put "${localPath}" "${targetPath}"`;
+                    break;
+                case 'ifuse':
+                    // 使用ifuse挂载设备并复制文件
+                    throw new Error('ifuse 支持尚未实现');
+                case 'afc2-client':
+                    command = `afc2-client put "${localPath}" "${targetPath}"`;
+                    break;
+                default:
+                    throw new Error(`不支持的工具: ${availableTool}`);
+            }
+            
+            await execPromise(command);
             console.log(`iOS文件推送成功: ${localPath} -> ${targetPath}`);
         }
         catch (error) {
