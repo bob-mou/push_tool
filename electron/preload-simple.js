@@ -9,6 +9,9 @@ const electronAPI = {
   pushFile: (params) => {
     return ipcRenderer.invoke('push-file', params);
   },
+  materializeFile: (payload) => {
+    return ipcRenderer.invoke('materialize-file', payload);
+  },
   onTransferProgress: (cb) => {
     ipcRenderer.on('transfer-progress', (_e, payload) => cb(payload));
   },
@@ -63,6 +66,13 @@ const electronAPI = {
   },
   getTransferStats: () => {
     return ipcRenderer.invoke('get-transfer-stats');
+  }
+  ,
+  getSaveDir: () => {
+    return ipcRenderer.invoke('get-save-dir');
+  },
+  saveLocalFile: (params) => {
+    return ipcRenderer.invoke('save-local-file', params);
   }
 };
 

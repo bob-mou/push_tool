@@ -28,7 +28,7 @@ interface TransferStats {
 
 interface ElectronAPI {
   getDevices: () => Promise<any[]>;
-  pushFile: (params: { deviceId: string; filePath: string; deviceType: string }) => Promise<{ success: boolean; error?: string; targetPath?: string; duration?: number }>;
+  pushFile: (params: { deviceId: string; filePath: string; deviceType: string; targetDir?: string }) => Promise<{ success: boolean; error?: string; targetPath?: string; duration?: number }>;
   selectFile: () => Promise<string | null>;
   checkADB: () => Promise<boolean>;
   checkIOSTools: () => Promise<boolean>;
@@ -44,6 +44,20 @@ interface ElectronAPI {
   getTransferLog: (limit?: number) => Promise<TransferLogEntry[]>;
   clearTransferLog: () => Promise<{ success: boolean; error?: string }>;
   getTransferStats: () => Promise<TransferStats>;
+  materializeFile: (payload: { fileName: string; data: ArrayBuffer | Uint8Array | Buffer | { type?: string; data?: number[] } }) => Promise<string | null>;
+  onTransferProgress: (cb: (payload: { fileName?: string; progress: number; speedMbps?: number; etaSeconds?: number; targetPath?: string; error?: string }) => void) => void;
+  
+  // 设备监控相关API
+  startDeviceMonitoring: () => Promise<{ success: boolean }>;
+  stopDeviceMonitoring: () => Promise<{ success: boolean }>;
+  getDeviceMonitorConfig: () => Promise<any>;
+  updateDeviceMonitorConfig: (config: any) => Promise<{ success: boolean }>;
+  forceRefreshDevices: () => Promise<{ success: boolean; devices?: any[]; error?: string }>;
+  
+  // 事件监听相关
+  onDeviceStatusChanged: (callback: (event: any) => void) => () => void;
+  onDeviceMonitorError: (callback: (error: string) => void) => () => void;
+  removeDeviceListeners: () => void;
 }
 
 interface Window {

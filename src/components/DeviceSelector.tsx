@@ -9,25 +9,53 @@ export function DeviceSelector() {
 
   useEffect(() => {
     refreshDevices();
+    
+    // 设置设备状态变化监听
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      const api = window.electronAPI;
+      
+      try {
+        // 监听设备连接状态变化
+        const removeDeviceListener = api.onDeviceStatusChanged((event: any) => {
+          console.log('设备状态变化:', event);
+          refreshDevices();
+        });
+        
+        // 监听设备监控错误
+        const removeErrorListener = api.onDeviceMonitorError((error: string) => {
+          console.error('设备监控错误:', error);
+        });
+        
+        // 清理函数
+        return () => {
+          if (typeof removeDeviceListener === 'function') {
+            removeDeviceListener();
+          }
+          if (typeof removeErrorListener === 'function') {
+            removeErrorListener();
+          }
+        };
+      } catch (error) {
+        console.error('设置设备监听器失败:', error);
+      }
+    }
   }, []);
 
   const refreshDevices = async () => {
     setIsRefreshing(true);
     try {
-      const hasElectron = typeof window !== 'undefined' && (window as any).electronAPI;
-      if (hasElectron) {
-        const api = (window as any).electronAPI;
-        await Promise.all([
-          api.checkADB?.(),
-          api.checkIOSTools?.()
-        ]);
-      }
-      const deviceList = hasElectron ? await (window as any).electronAPI.getDevices() : [];
-      setDevices(deviceList);
-      
-      // 如果没有选中设备且有可用设备，自动选择第一个
-      if (!selectedDevice && deviceList.length > 0) {
-        setSelectedDevice(deviceList[0]);
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        const api = window.electronAPI;
+        const devices = await api.getDevices();
+        setDevices(devices);
+        
+        // 如果没有选中设备且有可用设备，自动选择第一个
+        if (!selectedDevice && devices && devices.length > 0) {
+          setSelectedDevice(devices[0]);
+        }
+      } else {
+        // 非Electron环境，使用空数组
+        setDevices([]);
       }
     } catch (error) {
       console.error('获取设备列表失败:', error);

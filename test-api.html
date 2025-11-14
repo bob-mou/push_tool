@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API测试</title>
+</head>
+<body>
+    <h1>Electron API测试</h1>
+    <button onclick="testAPI()">测试API</button>
+    <div id="result"></div>
+    
+    <script>
+        function testAPI() {
+            const resultDiv = document.getElementById('result');
+            try {
+                if (typeof window !== 'undefined' && window.electronAPI) {
+                    resultDiv.innerHTML = '<p style="color: green;">✅ electronAPI已找到</p>';
+                    
+                    // 测试getDevices
+                    window.electronAPI.getDevices()
+                        .then(devices => {
+                            resultDiv.innerHTML += `<p style="color: green;">✅ getDevices成功: ${devices.length}个设备</p>`;
+                        })
+                        .catch(error => {
+                            resultDiv.innerHTML += `<p style="color: red;">❌ getDevices失败: ${error.message}</p>`;
+                        });
+                        
+                    // 测试forceRefreshDevices
+                    window.electronAPI.forceRefreshDevices()
+                        .then(result => {
+                            resultDiv.innerHTML += `<p style="color: green;">✅ forceRefreshDevices成功: ${result.success}</p>`;
+                        })
+                        .catch(error => {
+                            resultDiv.innerHTML += `<p style="color: red;">❌ forceRefreshDevices失败: ${error.message}</p>`;
+                        });
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">❌ electronAPI未找到</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">❌ 错误: ${error.message}</p>`;
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.addEventListener('DOMContentLoaded', () => {
+            testAPI();
+        });
+    </script>
+</body>
+</html>

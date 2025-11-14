@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 // import Store from 'electron-store';
 // import { spawn } from 'child_process';
 import { DeviceManager } from '../src/utils/deviceManager.js';
+import { DeviceMonitor } from '../src/utils/deviceMonitor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 // const store = new Store(); // 暂时注释掉，后续使用
 const deviceManager = DeviceManager.getInstance();
+const deviceMonitor = DeviceMonitor.getInstance();
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -198,13 +200,49 @@ ipcMain.handle('open-help', async () => {
   }
 });
 
+// 设备监控相关函数
+function setupDeviceMonitor() {
+  // 监听设备状态变化事件
+  deviceMonitor.on('deviceStatusChanged', (event) => {
+    console.log('设备状态变化:', event);
+    
+    // 通知渲染进程
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('device-status-changed', event);
+    }
+  });
+
+  // 监听错误事件
+  deviceMonitor.on('error', (error) => {
+    console.error('设备监控错误:', error);
+    
+    // 通知渲染进程错误信息
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('device-monitor-error', error.message);
+    }
+  });
+
+  // 启动设备监控
+  deviceMonitor.start();
+}
+
+// 停止设备监控
+function stopDeviceMonitor() {
+  deviceMonitor.stop();
+}
+
 app.whenReady().then(() => {
   createWindow();
   createTray();
+  
+  // 设置设备监控
+  setupDeviceMonitor();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      // 重新设置设备监控
+      setupDeviceMonitor();
     }
   });
 });
@@ -212,5 +250,43 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// 应用退出前清理资源
+app.on('before-quit', () => {
+  stopDeviceMonitor();
+});
+
+// 新增IPC通信处理 - 设备监控相关
+ipcMain.handle('start-device-monitoring', () => {
+  if (!deviceMonitor.isRunning()) {
+    deviceMonitor.start();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('stop-device-monitoring', () => {
+  if (deviceMonitor.isRunning()) {
+    deviceMonitor.stop();
+  }
+  return { success: true };
+});
+
+ipcMain.handle('get-device-monitor-config', () => {
+  return deviceMonitor.getConfig();
+});
+
+ipcMain.handle('update-device-monitor-config', (_, config) => {
+  deviceMonitor.updateConfig(config);
+  return { success: true };
+});
+
+ipcMain.handle('force-refresh-devices', async () => {
+  try {
+    const devices = await deviceMonitor.forceRefresh();
+    return { success: true, devices };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 });

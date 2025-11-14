@@ -111,7 +111,15 @@ export class TransferPathManager {
       ...entry,
       timestamp: new Date().toISOString()
     };
-
+    if (fullEntry.status !== 'in_progress') {
+      this.transferLog = this.transferLog.filter((l) => {
+        return !(l && l.status === 'in_progress'
+          && l.deviceId === fullEntry.deviceId
+          && l.deviceType === fullEntry.deviceType
+          && l.sourcePath === fullEntry.sourcePath
+          && l.targetPath === fullEntry.targetPath);
+      });
+    }
     this.transferLog.unshift(fullEntry);
     
     // 限制日志条目数量
@@ -122,7 +130,7 @@ export class TransferPathManager {
 
   // 获取传输日志
   getTransferLog(limit?: number): TransferLogEntry[] {
-    const logs = this.transferLog.filter(log => log);
+    const logs = this.transferLog.filter(log => log && log.status !== 'in_progress');
     return limit ? logs.slice(0, limit) : logs;
   }
 

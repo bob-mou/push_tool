@@ -95,62 +95,58 @@ function setupIPC(win) {
       const start = Date.now();
       let targetPath = remoteDir.replace(/\/$/, '') + '/' + fileName;
 
-      // 日志：开始
-      transferPathManager.addTransferLog({
-        deviceId,
-        deviceType,
-        deviceName: `${deviceType}设备`,
-        sourcePath: filePath,
-        targetPath,
-        status: 'in_progress',
-        fileSize
-      });
+      
 
       
       if (deviceType === 'android') {
         await execPromise(`adb -s ${deviceId} shell mkdir -p "${remoteDir}"`);
         const chunkSize = 8 * 1024 * 1024;
-        const total = Math.ceil(fileSize / chunkSize);
-        const buffer = fs.readFileSync(filePath);
-        let startIndex = 0;
-        try {
-          const { stdout: existing } = await exec(`adb -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
-          const lines = String(existing).split('\n').filter(Boolean);
-          const idxs = lines.map(l => {
-            const m = l.match(/\.part(\d+)$/);
-            return m ? parseInt(m[1], 10) : -1;
-          }).filter(n => n >= 0);
-          if (idxs.length > 0) startIndex = Math.max(...idxs) + 1;
-        } catch {}
-        for (let i = startIndex; i < total; i++) {
-          const begin = i * chunkSize;
-          const end = Math.min(begin + chunkSize, fileSize);
-          const tmp = path.join(__dirname, `.__upload_part_${Date.now()}_${i}`);
-          fs.writeFileSync(tmp, buffer.slice(begin, end));
-          const partRemote = `${targetPath}.part${i}`;
-          let tries = 0;
-          while (true) {
-            try {
-              await execPromise(`adb -s ${deviceId} push "${tmp}" "${partRemote}"`);
-              break;
-            } catch (e) {
-              if (++tries >= 3) throw e;
+        if (fileSize <= chunkSize) {
+          await execPromise(`adb -s ${deviceId} push -a "${filePath}" "${targetPath}"`);
+          const d = stats.mtime;
+          const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
+          await execPromise(`adb -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || adb -s ${deviceId} shell touch "${targetPath}"`);
+        } else {
+          const total = Math.ceil(fileSize / chunkSize);
+          const buffer = fs.readFileSync(filePath);
+          let startIndex = 0;
+          try {
+            const { stdout: existing } = await exec(`adb -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
+            const lines = String(existing).split('\n').filter(Boolean);
+            const idxs = lines.map(l => {
+              const m = l.match(/\.part(\d+)$/);
+              return m ? parseInt(m[1], 10) : -1;
+            }).filter(n => n >= 0);
+            if (idxs.length > 0) startIndex = Math.max(...idxs) + 1;
+          } catch {}
+          for (let i = startIndex; i < total; i++) {
+            const begin = i * chunkSize;
+            const end = Math.min(begin + chunkSize, fileSize);
+            const tmp = path.join(__dirname, `.__upload_part_${Date.now()}_${i}`);
+            fs.writeFileSync(tmp, buffer.slice(begin, end));
+            const partRemote = `${targetPath}.part${i}`;
+            let tries = 0;
+            while (true) {
+              try {
+                await execPromise(`adb -s ${deviceId} push "${tmp}" "${partRemote}"`);
+                break;
+              } catch (e) {
+                if (++tries >= 3) throw e;
+              }
             }
+            fs.unlinkSync(tmp);
+            const transferred = end;
+            const elapsed = (Date.now() - start) / 1000;
+            const speed = elapsed > 0 ? (transferred / 1024 / 1024) / elapsed : 0;
+            const eta = speed > 0 ? (fileSize / 1024 / 1024 - transferred / 1024 / 1024) / speed : undefined;
+            sendProgress({ progress: Math.round((transferred / fileSize) * 100), speedMbps: speed, etaSeconds: eta, targetPath });
           }
-          fs.unlinkSync(tmp);
-          const transferred = end;
-          const elapsed = (Date.now() - start) / 1000;
-          const speed = elapsed > 0 ? (transferred / 1024 / 1024) / elapsed : 0;
-          const eta = speed > 0 ? (fileSize / 1024 / 1024 - transferred / 1024 / 1024) / speed : undefined;
-          sendProgress({ progress: Math.round((transferred / fileSize) * 100), speedMbps: speed, etaSeconds: eta, targetPath });
+          const parts = Array.from({ length: Math.ceil(fileSize / chunkSize) }, (_, i) => `${targetPath}.part${i}`).join(' ');
+          await execPromise(`adb -s ${deviceId} shell sh -c "cat ${parts} > \"${targetPath}\" && rm ${parts}"`);
+          const d = stats.mtime;
+          const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
+          await execPromise(`adb -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || adb -s ${deviceId} shell touch "${targetPath}"`);
         }
-        
-        const parts = Array.from({ length: Math.ceil(fileSize / chunkSize) }, (_, i) => `${targetPath}.part${i}`).join(' ');
-        await execPromise(`adb -s ${deviceId} shell sh -c "cat ${parts} > \"${targetPath}\" && rm ${parts}"`);
-        
-        const d = stats.mtime;
-        const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
-        await execPromise(`adb -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || adb -s ${deviceId} shell touch "${targetPath}"`);
       } else {
         await deviceManager.pushFileToIOS(deviceId, filePath, remoteDir);
       }
@@ -184,6 +180,25 @@ function setupIPC(win) {
         });
       } catch {}
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('materialize-file', async (event, { fileName, data }) => {
+    try {
+      const base = path.basename(String(fileName || 'file'));
+      const tempDir = path.join(app.getPath('temp'), 'FilesPushTemp');
+      fs.mkdirSync(tempDir, { recursive: true });
+      const out = path.join(tempDir, base);
+      let buf;
+      if (Buffer.isBuffer(data)) buf = data;
+      else if (data && data.type === 'Buffer' && Array.isArray(data.data)) buf = Buffer.from(data.data);
+      else if (ArrayBuffer.isView(data)) buf = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+      else if (data && typeof data === 'object' && 'byteLength' in data) buf = Buffer.from(data);
+      else buf = Buffer.from([]);
+      fs.writeFileSync(out, buf);
+      return out;
+    } catch (e) {
+      return null;
     }
   });
 
@@ -253,7 +268,64 @@ function setupIPC(win) {
     return defaults;
   });
 
-  // 传输路径与日志相关功能暂不启用（移除依赖导致）
+  ipcMain.handle('get-transfer-log', async (event, limit) => {
+    try {
+      return transferPathManager.getTransferLog(typeof limit === 'number' ? limit : undefined);
+    } catch (e) {
+      return [];
+    }
+  });
+
+  ipcMain.handle('clear-transfer-log', async () => {
+    try {
+      transferPathManager.clearTransferLog();
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: '清理失败' };
+    }
+  });
+
+  ipcMain.handle('get-transfer-stats', async () => {
+    try {
+      return transferPathManager.getTransferStats();
+    } catch (e) {
+      return { total: 0, successful: 0, failed: 0, byDeviceType: { android: 0, ios: 0 }, recent: [] };
+    }
+  });
+
+  ipcMain.handle('get-transfer-paths', async () => {
+    try {
+      const defaults = {
+        android: transferPathManager.getDefaultPath('android'),
+        ios: transferPathManager.getDefaultPath('ios')
+      };
+      const saved = store.get('transferPaths');
+      if (saved && typeof saved === 'object' && saved.android && saved.ios) return saved;
+      return defaults;
+    } catch (e) {
+      return {
+        android: transferPathManager.getDefaultPath('android'),
+        ios: transferPathManager.getDefaultPath('ios')
+      };
+    }
+  });
+
+  ipcMain.handle('update-transfer-paths', async (event, paths) => {
+    try {
+      const a = transferPathManager.validatePath(paths?.android, 'android');
+      const i = transferPathManager.validatePath(paths?.ios, 'ios');
+      if (!a.valid) return { success: false, error: a.error || 'Android路径无效' };
+      if (!i.valid) return { success: false, error: i.error || 'iOS路径无效' };
+      const normalized = {
+        android: transferPathManager.normalizePath(paths.android),
+        ios: transferPathManager.normalizePath(paths.ios)
+      };
+      store.set('transferPaths', normalized);
+      return { success: true, paths: normalized };
+    } catch (e) {
+      return { success: false, error: '更新失败' };
+    }
+  });
 
   ipcMain.handle('select-directory', async () => {
     try {
@@ -333,6 +405,80 @@ function setupIPC(win) {
     });
     helpWin.loadURL('http://localhost:5173/#/help');
   });
+
+  ipcMain.handle('get-save-dir', async () => {
+    try {
+      let dir = store.get('saveDir');
+      if (typeof dir !== 'string' || !dir.trim()) {
+        dir = path.join(app.getPath('documents'), 'FilesPush');
+      }
+      fs.mkdirSync(dir, { recursive: true });
+      return dir;
+    } catch (e) {
+      const fallback = path.join(app.getPath('documents'), 'FilesPush');
+      try { fs.mkdirSync(fallback, { recursive: true }); } catch {}
+      return fallback;
+    }
+  });
+
+  ipcMain.handle('save-local-file', async (event, { sourcePath, options }) => {
+    try {
+      if (!sourcePath || typeof sourcePath !== 'string') {
+        return { success: false, error: '无效的源文件路径' };
+      }
+
+      const stat = fs.statSync(sourcePath);
+      if (!stat.isFile()) return { success: false, error: '源路径不是文件' };
+
+      let saveDir = store.get('saveDir');
+      if (typeof saveDir !== 'string' || !saveDir.trim()) saveDir = path.join(app.getPath('documents'), 'FilesPush');
+      fs.mkdirSync(saveDir, { recursive: true });
+
+      const fileName = path.basename(sourcePath);
+      const strategy = options?.conflictStrategy === 'overwrite' ? 'overwrite' : (options?.conflictStrategy === 'skip' ? 'skip' : 'rename');
+
+      const targetBase = path.join(saveDir, fileName);
+      let finalTarget = targetBase;
+      if (fs.existsSync(targetBase)) {
+        if (strategy === 'overwrite') {
+          try { fs.unlinkSync(targetBase); } catch {}
+        } else if (strategy === 'skip') {
+          return { success: false, error: '文件已存在，跳过' };
+        } else {
+          const ext = path.extname(fileName);
+          const base = path.basename(fileName, ext);
+          let i = 1;
+          while (fs.existsSync(finalTarget)) {
+            finalTarget = path.join(saveDir, `${base} (${i})${ext}`);
+            i++;
+          }
+        }
+      }
+
+      const tempTarget = `${finalTarget}.tmp`;
+      fs.copyFileSync(sourcePath, tempTarget);
+
+      const srcSize = stat.size;
+      const tmpStat = fs.statSync(tempTarget);
+      if (tmpStat.size !== srcSize) {
+        try { fs.unlinkSync(tempTarget); } catch {}
+        return { success: false, error: '文件大小不匹配' };
+      }
+
+      try { fs.renameSync(tempTarget, finalTarget); } catch (e) {
+        try { fs.unlinkSync(tempTarget); } catch {}
+        return { success: false, error: '原子重命名失败' };
+      }
+
+      try {
+        fs.utimesSync(finalTarget, stat.atime, stat.mtime);
+      } catch {}
+
+      return { success: true, finalPath: finalTarget, targetDir: saveDir };
+    } catch (e) {
+      return { success: false, error: e?.message || '保存失败' };
+    }
+  });
 }
 
 app.whenReady().then(createWindow);
@@ -346,7 +492,8 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
-}
+  }
+});
 
 function execPromiseSafe(cmd) {
   return new Promise((resolve) => {
@@ -365,4 +512,3 @@ function execPromise(cmd) {
     });
   });
 }
-});

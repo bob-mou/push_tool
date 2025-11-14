@@ -57,6 +57,15 @@ export class TransferPathManager {
 
   addTransferLog(entry) {
     const fullEntry = { ...entry, timestamp: new Date().toISOString() };
+    if (fullEntry.status !== 'in_progress') {
+      this.transferLog = this.transferLog.filter((l) => {
+        return !(l && l.status === 'in_progress'
+          && l.deviceId === fullEntry.deviceId
+          && l.deviceType === fullEntry.deviceType
+          && l.sourcePath === fullEntry.sourcePath
+          && l.targetPath === fullEntry.targetPath);
+      });
+    }
     this.transferLog.unshift(fullEntry);
     if (this.transferLog.length > this.maxLogEntries) {
       this.transferLog = this.transferLog.slice(0, this.maxLogEntries);
@@ -64,7 +73,7 @@ export class TransferPathManager {
   }
 
   getTransferLog(limit) {
-    const logs = this.transferLog.filter(Boolean);
+    const logs = this.transferLog.filter((l) => Boolean(l) && l.status !== 'in_progress');
     return limit ? logs.slice(0, limit) : logs;
   }
 

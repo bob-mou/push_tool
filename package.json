@@ -16,7 +16,9 @@
     "electron": "electron .",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test:monitor": "node test-device-monitor.js",
+    "test:adb": "node test-adb.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",

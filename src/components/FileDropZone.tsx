@@ -1,15 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Smartphone, Settings, HelpCircle, X } from 'lucide-react';
+import { Upload, Settings, HelpCircle } from 'lucide-react';
 import { useStore } from '@/store/appStore';
 import { DeviceSelector } from './DeviceSelector';
 import { TransferProgress } from './TransferProgress';
 import { SettingsModal } from './SettingsModal';
-import { HelpModal } from './HelpModal';
+ 
  
 
 interface DroppedFile extends File {
-  path?: string;
+  path: string;
 }
 
 export function FileDropZone() {
@@ -24,30 +24,9 @@ export function FileDropZone() {
   
   const [showSettings, setShowSettings] = useState(false);
 
-  const onDrop = useCallback(async (acceptedFiles: DroppedFile[]) => {
-    if (!selectedDevice) {
-      alert('请先选择设备');
-      return;
-    }
-
-    if (acceptedFiles.length === 0) return;
-
-    
-    for (const f of acceptedFiles) {
-      const max = 500 * 1024 * 1024;
-      if (typeof f.size === 'number' && f.size > max) {
-        alert(`文件过大: ${f.name} 超过500MB限制`);
-        return;
-      }
-    }
-
-    
-    enqueueTransfers(acceptedFiles.map(f => ({ fileName: f.name, filePath: (f as DroppedFile).path || f.name })));
-
-    const processOne = async (file: DroppedFile) => {
-    
+  const processOne = async (file: DroppedFile, queue: DroppedFile[]) => {
     let filePath = file.path || file.name;
-    
+
     const looksRelative = (p: string) => {
       if (!p) return true;
       const s = p.replace(/\\/g, '/');
@@ -59,42 +38,43 @@ export function FileDropZone() {
     };
 
     if (!filePath || filePath === file.name || looksRelative(filePath)) {
-      const selectedPath = await window.electronAPI.selectFile();
-      if (!selectedPath) {
-        alert('请选择文件');
-        return;
+      try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const tmp = await window.electronAPI.materializeFile({ fileName: file.name, data: buf });
+        if (!tmp) {
+          const selectedPath = await window.electronAPI.selectFile();
+          if (!selectedPath) {
+            alert('请选择文件');
+            return;
+          }
+          filePath = selectedPath;
+        } else {
+          filePath = tmp;
+        }
+      } catch {
+        const selectedPath = await window.electronAPI.selectFile();
+        if (!selectedPath) {
+          alert('请选择文件');
+          return;
+        }
+        filePath = selectedPath;
       }
-      filePath = selectedPath;
     }
 
-    
     if (!filePath || typeof filePath !== 'string') {
       alert('无效的文件路径');
       return;
     }
 
-    
     try {
-      
       filePath = decodeURIComponent(filePath);
     } catch (e) {
-      
       console.log('Path decoding failed, using original path:', e);
     }
 
-    
     if (filePath.includes('�') || filePath.includes('?') || /[\uFFFD-\uFFFF]/.test(filePath)) {
       console.error('检测到文件路径编码错误:', filePath);
       alert('文件路径编码错误，请使用文件选择对话框选择文件');
-      return;
-    }
-
-    
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    const pathExtension = filePath.split('.').pop()?.toLowerCase();
-    if (fileExtension && pathExtension && fileExtension !== pathExtension) {
-      console.error('文件扩展名不匹配，可能路径损坏:', { fileName: file.name, filePath });
-      alert('文件路径可能损坏，请使用文件选择对话框选择文件');
       return;
     }
 
@@ -106,17 +86,13 @@ export function FileDropZone() {
     });
 
     try {
-      
       let targetDir: string | undefined = undefined;
       try {
-        const useCustom = confirm('是否使用自定义保存路径？\n选择“确定”将输入远程目录，否则使用默认');
-        if (useCustom) {
-          const input = prompt('输入Android保存目录（以/sdcard/或/storage/开头）');
-          if (input) {
-            const v = await window.electronAPI.validateTransferPath({ path: input, deviceType: selectedDevice.type });
-            if (v.valid) targetDir = input;
-            else alert(`路径无效: ${v.error}`);
-          }
+        const paths = await window.electronAPI.getTransferPaths();
+        const candidate = selectedDevice.type === 'android' ? (paths as any).android : (paths as any).ios;
+        if (typeof candidate === 'string' && candidate.trim()) {
+          const v = await window.electronAPI.validateTransferPath({ path: candidate, deviceType: selectedDevice.type });
+          if (v.valid) targetDir = candidate;
         }
       } catch {}
 
@@ -128,17 +104,35 @@ export function FileDropZone() {
       });
 
       if (result.success) {
+        try {
+          const saveRes = await (window as any).electronAPI.saveLocalFile({
+            sourcePath: filePath,
+            options: {
+              preserveAttributes: true,
+              atomicMove: true,
+              conflictStrategy: 'rename'
+            }
+          });
+          if (saveRes?.success) {
+            console.log(`文件已保存到本地: ${saveRes.finalPath}`);
+          } else {
+            console.warn(`本地保存失败: ${saveRes?.error}`);
+          }
+        } catch (localError) {
+          console.warn('本地保存异常:', localError);
+        }
+
         setTransferProgress({
           fileName: file.name,
           progress: 100,
           status: 'completed',
           targetPath: result.targetPath
         });
-        
+
         setTimeout(() => {
           setTransferProgress(null);
           setTransferring(false);
-        }, 2000);
+        }, 5000);
       } else {
         setTransferProgress({
           fileName: file.name,
@@ -146,7 +140,7 @@ export function FileDropZone() {
           status: 'error',
           error: result.error
         });
-        
+
         setTimeout(() => {
           setTransferProgress(null);
           setTransferring(false);
@@ -157,33 +151,45 @@ export function FileDropZone() {
         fileName: file.name,
         progress: 0,
         status: 'error',
-        error: error.message
+        error: (error as any).message
       });
-      
+
       setTimeout(() => {
         setTransferProgress(null);
         setTransferring(false);
       }, 3000);
     }
-    } finally {
+    finally {
       dequeueTransfer();
-      const next = acceptedFiles.shift();
-      if (next) await processOne(next as DroppedFile);
-      else setTransferring(false);
+      const next = queue.shift();
+      if (next) await processOne(next as DroppedFile, queue);
     }
   };
 
-  
   const startProcess = useCallback(async (files: DroppedFile[]) => {
     const list = [...files];
-    if (list.length > 0) await processOne(list.shift() as DroppedFile);
+    if (list.length > 0) await processOne(list.shift() as DroppedFile, list);
   }, [selectedDevice]);
 
-  const onDropHandler = useCallback(async (files: DroppedFile[]) => {
-    await startProcess(files);
-  }, [startProcess]);
+  const onDrop = useCallback(async (acceptedFiles: DroppedFile[]) => {
+    if (!selectedDevice) {
+      alert('请先选择设备');
+      return;
+    }
 
-  const onDrop = onDropHandler;
+    if (acceptedFiles.length === 0) return;
+
+    for (const f of acceptedFiles) {
+      const max = 500 * 1024 * 1024;
+      if (typeof f.size === 'number' && f.size > max) {
+        alert(`文件过大: ${f.name} 超过500MB限制`);
+        return;
+      }
+    }
+
+    enqueueTransfers(acceptedFiles.map(f => ({ fileName: f.name, filePath: (f as DroppedFile).path || f.name })));
+    await startProcess(acceptedFiles);
+  }, [selectedDevice, startProcess]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -194,14 +200,17 @@ export function FileDropZone() {
   useEffect(() => {
     if ((window as any).electronAPI?.onTransferProgress) {
       (window as any).electronAPI.onTransferProgress((payload: any) => {
-        setTransferProgress(prev => prev ? {
-          ...prev,
-          progress: typeof payload.progress === 'number' ? payload.progress : prev.progress,
-          speedMbps: typeof payload.speedMbps === 'number' ? payload.speedMbps : prev.speedMbps,
-          etaSeconds: typeof payload.etaSeconds === 'number' ? payload.etaSeconds : prev.etaSeconds,
-          targetPath: payload.targetPath || prev.targetPath,
-          error: payload.error || prev.error
-        } : prev);
+        const prev = (useStore as any).getState().transferProgress;
+        if (prev) {
+          setTransferProgress({
+            ...prev,
+            progress: typeof payload.progress === 'number' ? payload.progress : prev.progress,
+            speedMbps: typeof payload.speedMbps === 'number' ? payload.speedMbps : prev.speedMbps,
+            etaSeconds: typeof payload.etaSeconds === 'number' ? payload.etaSeconds : prev.etaSeconds,
+            targetPath: payload.targetPath || prev.targetPath,
+            error: payload.error || prev.error
+          });
+        }
       });
     }
   }, [setTransferProgress]);
@@ -216,22 +225,6 @@ export function FileDropZone() {
               <DeviceSelector />
             </div>
             
-            {import.meta.env.DEV && (
-              <button
-                onClick={() => {
-                  setTransferring(true);
-                  setTransferProgress({ fileName: 'demo.txt', progress: 100, status: 'completed' });
-                  setTimeout(() => {
-                    setTransferProgress(null);
-                    setTransferring(false);
-                  }, 2000);
-                }}
-                className="px-2 py-1 rounded-lg bg-blue-100 text-blue-700 shadow-md hover:shadow-lg transition-shadow"
-                title="模拟完成"
-              >
-                模拟完成
-              </button>
-            )}
 
             <button
               onClick={() => setShowSettings(true)}
