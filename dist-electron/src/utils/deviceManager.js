@@ -14,31 +14,38 @@ export class DeviceManager {
     // 获取Android设备列表
     async getAndroidDevices() {
         try {
+            console.log('🔍 [DeviceManager] 开始获取Android设备...');
             const settings = await this.getSettings();
             const adbPath = settings.adbPath || 'adb';
             const { stdout } = await execPromise(`"${adbPath}" devices`);
-            const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices') && line.includes('device'));
+            console.log('📋 [DeviceManager] ADB输出:', stdout);
+            const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices'));
+            console.log('📋 [DeviceManager] 处理行数:', lines.length);
             const devices = [];
             for (const line of lines) {
+                console.log('📋 [DeviceManager] 处理行:', line);
                 const parts = line.trim().split(/\s+/);
                 const deviceId = parts[0];
                 const status = parts[1];
+                console.log(`📋 [DeviceManager] 设备ID: ${deviceId}, 状态: ${status}`);
                 if (deviceId && status === 'device') {
                     try {
-                        // 获取设备详细信息
+                        console.log(`📋 [DeviceManager] 获取设备 ${deviceId} 详细信息...`);
                         const modelResult = await execPromise(`"${adbPath}" -s ${deviceId} shell getprop ro.product.model`);
                         const manufacturerResult = await execPromise(`"${adbPath}" -s ${deviceId} shell getprop ro.product.manufacturer`);
-                        devices.push({
+                        const device = {
                             id: deviceId,
                             name: `${manufacturerResult.stdout.trim()} ${modelResult.stdout.trim()}`,
                             type: 'android',
                             status: 'connected',
                             model: modelResult.stdout.trim(),
                             manufacturer: manufacturerResult.stdout.trim()
-                        });
+                        };
+                        console.log('📋 [DeviceManager] 发现设备:', device);
+                        devices.push(device);
                     }
                     catch (error) {
-                        // 如果获取详细信息失败，使用设备ID作为名称
+                        console.warn(`⚠️ [DeviceManager] 获取设备 ${deviceId} 详细信息失败:`, error);
                         devices.push({
                             id: deviceId,
                             name: deviceId,
@@ -48,30 +55,36 @@ export class DeviceManager {
                     }
                 }
             }
+            console.log(`📋 [DeviceManager] 最终发现 ${devices.length} 个Android设备`);
             return devices;
         }
         catch (error) {
-            console.error('获取Android设备失败:', error);
+            console.error('❌ [DeviceManager] 获取Android设备失败:', error);
             return [];
         }
     }
-    // 获取iOS设备列表（使用 idb）
+    // 获取iOS设备列表（使用idb）
     async getIOSDevices() {
         try {
             const idbPath = await this.getIdbPath();
             try {
                 const { stdout } = await execPromise(`"${idbPath}" list-targets --format=json`);
                 const arr = JSON.parse(stdout);
-                const devices = (Array.isArray(arr) ? arr : [])
-                    .filter((t) => String(t?.target_type || t?.type || '').toLowerCase() === 'device' || Boolean(t?.is_physical_device))
-                    .map((t) => ({ id: String(t?.udid || t?.identifier || t?.name || ''), name: String(t?.name || t?.udid || 'iOS Device'), type: 'ios', status: 'connected' }));
-                return devices.filter((d) => d.id);
+                const devices = (Array.isArray(arr) ? arr : []).filter((t) => {
+                    return String(t?.target_type || t?.type || '').toLowerCase() === 'device' || Boolean(t?.is_physical_device);
+                }).map((t) => ({
+                    id: String(t?.udid || t?.identifier || t?.name || ''),
+                    name: String(t?.name || t?.udid || 'iOS Device'),
+                    type: 'ios',
+                    status: 'connected'
+                }));
+                return devices.filter(d => d.id);
             }
             catch {
                 try {
                     const { stdout } = await execPromise(`"${idbPath}" list-targets`);
-                    const lines = String(stdout || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-                    const devices = lines.map((l) => ({ id: l.split(/\s+/)[0] || l, name: l, type: 'ios', status: 'connected' }));
+                    const lines = String(stdout || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+                    const devices = lines.map(l => ({ id: l.split(/\s+/)[0] || l, name: l, type: 'ios', status: 'connected' }));
                     return devices;
                 }
                 catch (e) {
@@ -87,11 +100,20 @@ export class DeviceManager {
     }
     // 获取所有连接的设备
     async getConnectedDevices() {
-        const [androidDevices, iosDevices] = await Promise.all([
-            this.getAndroidDevices(),
-            this.getIOSDevices()
-        ]);
-        return [...androidDevices, ...iosDevices];
+        console.log('🔍 [DeviceManager] 开始获取所有连接的设备...');
+        try {
+            const [androidDevices, iosDevices] = await Promise.all([
+                this.getAndroidDevices(),
+                this.getIOSDevices()
+            ]);
+            const allDevices = [...androidDevices, ...iosDevices];
+            console.log(`🔍 [DeviceManager] 总共发现 ${allDevices.length} 个设备`);
+            return allDevices;
+        }
+        catch (error) {
+            console.error('❌ [DeviceManager] 获取设备列表失败:', error);
+            return [];
+        }
     }
     // 检查ADB是否可用
     async isADBAvailable() {
@@ -105,7 +127,7 @@ export class DeviceManager {
             return false;
         }
     }
-    // 检查iOS工具是否可用（idb）
+    // 检查iOS工具是否可用
     async isIOSToolsAvailable() {
         try {
             const idbPath = await this.getIdbPath();
@@ -120,20 +142,32 @@ export class DeviceManager {
     async pushFileToAndroid(deviceId, localPath, remotePath) {
         try {
             // 标准化路径，处理Windows路径分隔符
-            let normalizedLocalPath = localPath.replace(/\\/g, '/');
-            if (!path.isAbsolute(normalizedLocalPath)) {
-                normalizedLocalPath = path.resolve(process.cwd(), normalizedLocalPath).replace(/\\/g, '/');
+            let fsLocalPath = path.normalize(localPath);
+            if (!path.isAbsolute(fsLocalPath)) {
+                fsLocalPath = path.resolve(process.cwd(), fsLocalPath);
             }
-            // 检查文件路径是否存在（避免编码错误）
-            try {
-                const fs = require('fs');
-                if (!fs.existsSync(normalizedLocalPath)) {
-                    throw new Error(`文件不存在: ${normalizedLocalPath}`);
+            let normalizedLocalPath = fsLocalPath.replace(/\\/g, '/');
+            if (!fs.existsSync(fsLocalPath)) {
+                throw new Error(`文件不存在: ${fsLocalPath}`);
+            }
+            {
+                let ok = false;
+                let lastErr = null;
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        fs.accessSync(fsLocalPath, fs.constants.R_OK);
+                        ok = true;
+                        break;
+                    }
+                    catch (e) {
+                        lastErr = e;
+                        await new Promise(r => setTimeout(r, 200 * Math.pow(2, i)));
+                    }
                 }
-            }
-            catch (checkError) {
-                console.error('文件检查失败:', checkError);
-                throw new Error(`无法访问文件: ${normalizedLocalPath}`);
+                if (!ok) {
+                    console.error('文件检查失败:', lastErr);
+                    throw new Error(`无法访问文件: ${fsLocalPath} ${lastErr?.message ? '(' + String(lastErr.message) + ')' : ''}`);
+                }
             }
             // 验证Android路径格式
             if (!remotePath.startsWith('/sdcard/') && !remotePath.startsWith('/storage/')) {
@@ -188,7 +222,7 @@ export class DeviceManager {
             throw new Error(`推送失败: ${error.message}`);
         }
     }
-    // 推送文件到iOS设备（idb）
+    // 推送文件到iOS设备
     async pushFileToIOS(deviceId, localPath, remotePath) {
         try {
             // 标准化路径，处理Windows路径分隔符
@@ -225,12 +259,12 @@ export class DeviceManager {
             }
             const idbPath = await this.getIdbPath();
             console.log(`使用本地 iDB 工具: ${idbPath}`);
-            // 验证设备连接（idb）
+            // 验证设备连接
             try {
                 try {
                     await execPromise(`"${idbPath}" connect ${deviceId}`);
                 }
-                catch {}
+                catch { }
                 await execPromise(`"${idbPath}" file ls "/"`);
                 console.log(`✅ iOS设备连接验证成功: ${deviceId}`);
             }
@@ -238,22 +272,21 @@ export class DeviceManager {
                 console.error('❌ iOS设备连接验证失败:', deviceError);
                 throw new Error(`无法连接到iOS设备: ${deviceId}。请确保设备已连接并信任此电脑。`);
             }
-            // 创建远程目录（idb）
-            {
-                const mkdirCommand = `"${idbPath}" shell "mkdir -p \"${remotePath}\""`;
-                console.log(`创建iOS远程目录(iDB): ${mkdirCommand}`);
-                try {
-                    await execPromise(mkdirCommand);
-                    console.log('✅ 远程目录创建成功(iDB)');
-                }
-                catch (mkdirError) {
-                    console.log(`⏭️ 目录可能已存在(iDB)，继续推送: ${mkdirError.message}`);
-                }
+            // 创建远程目录
+            const mkdirCommand = `"${idbPath}" shell "mkdir -p \"${remotePath}\""`;
+            console.log(`创建iOS远程目录(iDB): ${mkdirCommand}`);
+            try {
+                await execPromise(mkdirCommand);
+                console.log('✅ 远程目录创建成功(iDB)');
+            }
+            catch (mkdirError) {
+                console.log(`⏭️ 目录可能已存在(iDB)，继续推送: ${mkdirError.message}`);
             }
             // 推送文件
             const fileName = path.basename(normalizedLocalPath);
             const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
             console.log(`开始推送iOS文件: ${normalizedLocalPath} -> ${targetPath}`);
+            // 使用配置的iOS工具路径推送文件
             const pushCommand = `"${idbPath}" file push "${normalizedLocalPath}" "${targetPath}"`;
             const pushResult = await execPromise(pushCommand);
             console.log(`✅ iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
@@ -299,17 +332,18 @@ export class DeviceManager {
             }
             // 降级到默认值（用于测试和独立运行）
             return {
+                iosToolsPath: '',
                 adbPath: ''
             };
         }
         catch (error) {
             console.warn('无法获取设置，使用默认值:', error);
             return {
+                iosToolsPath: '',
                 adbPath: ''
             };
         }
     }
-
     async getIdbPath() {
         const isWin = process.platform === 'win32';
         const execName = isWin ? 'idb.exe' : 'idb';
@@ -317,29 +351,30 @@ export class DeviceManager {
         try {
             candidates.push(path.join(process.cwd(), execName));
         }
-        catch {}
+        catch { }
         try {
             candidates.push(path.join(__dirname, '..', execName));
         }
-        catch {}
+        catch { }
         try {
             const w = globalThis.window;
             const g = globalThis.global || globalThis;
-            const api = (w && w.electronAPI) || (g && g.electronAPI);
+            const api = w?.electronAPI || g?.electronAPI;
             if (api && typeof api.getAppRoot === 'function') {
                 const root = await api.getAppRoot();
                 candidates.push(path.join(root, execName));
             }
         }
-        catch {}
+        catch { }
         for (const p of candidates) {
             try {
                 if (p && fs.existsSync(p)) {
                     return p.replace(/\\/g, '/');
                 }
             }
-            catch {}
+            catch { }
         }
+        // 最后尝试系统路径
         return execName;
     }
     // 安装APK到Android设备

@@ -55,28 +55,34 @@ export class DeviceMonitor extends EventEmitter {
      */
     async checkDevices() {
         try {
+            console.log('=== 开始设备检测 ===');
+            console.log('上次已知设备:', Array.from(this.lastKnownDevices.keys()));
             const currentDevices = await this.deviceManager.getConnectedDevices();
+            console.log('当前检测到设备:', currentDevices.map(d => d.id));
             const currentDeviceMap = new Map();
             // 构建当前设备映射
             currentDevices.forEach(device => {
                 currentDeviceMap.set(device.id, device);
             });
             // 检查新连接的设备
-            currentDevices.forEach(device => {
-                if (!this.lastKnownDevices.has(device.id)) {
-                    // 新设备连接
-                    this.emitDeviceEvent('connected', device);
-                }
+            const newDevices = currentDevices.filter(device => !this.lastKnownDevices.has(device.id));
+            console.log('新连接设备:', newDevices.map(d => d.id));
+            newDevices.forEach(device => {
+                console.log('检测到新设备连接:', device.id);
+                this.emitDeviceEvent('connected', device);
             });
             // 检查断开的设备
-            this.lastKnownDevices.forEach((device, deviceId) => {
-                if (!currentDeviceMap.has(deviceId)) {
-                    // 设备断开
-                    this.emitDeviceEvent('disconnected', device);
-                }
+            const disconnectedDevices = Array.from(this.lastKnownDevices.entries())
+                .filter(([deviceId]) => !currentDeviceMap.has(deviceId));
+            console.log('断开设备:', disconnectedDevices.map(([id]) => id));
+            disconnectedDevices.forEach(([deviceId, device]) => {
+                console.log('检测到设备断开:', deviceId);
+                this.emitDeviceEvent('disconnected', device);
             });
             // 更新已知设备列表
             this.lastKnownDevices = currentDeviceMap;
+            console.log('更新后的已知设备:', Array.from(this.lastKnownDevices.keys()));
+            console.log('=== 设备检测完成 ===');
             this.retryCount = 0; // 重置重试计数
         }
         catch (error) {
