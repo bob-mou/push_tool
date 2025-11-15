@@ -1,8 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, Tray, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// import Store from 'electron-store';
-// import { spawn } from 'child_process';
 import { DeviceManager } from '../src/utils/deviceManager.js';
 import { DeviceMonitor } from '../src/utils/deviceMonitor.js';
 
@@ -34,7 +32,6 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -93,63 +90,33 @@ function createTray() {
   });
 }
 
-// ADB命令执行函数 - 暂时注释掉，使用设备管理器替代
-/*
-function executeADB(command: string, args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const adb = spawn('adb', [command, ...args]);
-    let output = '';
-    let error = '';
-
-    adb.stdout.on('data', (data: any) => {
-      output += data.toString();
-    });
-
-    adb.stderr.on('data', (data: any) => {
-      error += data.toString();
-    });
-
-    adb.on('close', (code: any) => {
-      if (code === 0) {
-        resolve(output);
-      } else {
-        reject(new Error(error || `ADB command failed with code ${code}`));
-      }
-    });
-  });
-}
-*/
 
 // 获取连接的设备列表
-async function getConnectedDevices(): Promise<any[]> {
-  try {
-    const devices = await deviceManager.getConnectedDevices();
-    return devices;
-  } catch (error) {
-    console.error('获取设备列表失败:', error);
-    return [];
+  async function getConnectedDevices(): Promise<any[]> {
+    try {
+      const devices = await deviceManager.getConnectedDevices();
+      return devices;
+    } catch (error) {
+      return [];
+    }
   }
-}
 
 // 推送文件到设备
-async function pushFileToDevice(deviceId: string, filePath: string, deviceType: string): Promise<void> {
-  try {
-    let targetPath = '';
-    
-    if (deviceType === 'android') {
-      targetPath = '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/';
-      await deviceManager.pushFileToAndroid(deviceId, filePath, targetPath);
-    } else if (deviceType === 'ios') {
-      targetPath = '/Documents/BattleRecord/';
-      await deviceManager.pushFileToIOS(deviceId, filePath, targetPath);
+  async function pushFileToDevice(deviceId: string, filePath: string, deviceType: string): Promise<void> {
+    try {
+      let targetPath = '';
+      
+      if (deviceType === 'android') {
+        targetPath = '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/';
+        await deviceManager.pushFileToAndroid(deviceId, filePath, targetPath);
+      } else if (deviceType === 'ios') {
+        targetPath = '/Documents/BattleRecord/';
+        await deviceManager.pushFileToIOS(deviceId, filePath, targetPath);
+      }
+    } catch (error) {
+      throw error;
     }
-    
-    console.log(`文件推送成功: ${filePath} -> ${targetPath}`);
-  } catch (error) {
-    console.error('文件推送失败:', error);
-    throw error;
   }
-}
 
 // IPC通信处理
 ipcMain.handle('get-devices', async () => {
@@ -205,14 +172,11 @@ let isDeviceMonitorSetup = false;
 
 function setupDeviceMonitor() {
   if (isDeviceMonitorSetup) {
-    console.log('设备监控已设置，跳过重复设置');
     return;
   }
 
   // 监听设备状态变化事件
   deviceMonitor.on('deviceStatusChanged', (event) => {
-    console.log('设备状态变化:', event);
-    
     // 通知渲染进程
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('device-status-changed', event);
@@ -221,8 +185,6 @@ function setupDeviceMonitor() {
 
   // 监听错误事件
   deviceMonitor.on('error', (error) => {
-    console.error('设备监控错误:', error);
-    
     // 通知渲染进程错误信息
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('device-monitor-error', error.message);
