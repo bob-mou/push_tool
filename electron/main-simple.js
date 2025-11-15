@@ -94,6 +94,12 @@ function setupIPC(win) {
   
   ipcMain.handle('push-file', async (event, { deviceId, filePath, deviceType, targetDir }) => {
     try {
+      try {
+        const v = store.get('iosBundleId');
+        if (typeof v === 'string' && v.trim()) {
+          process.env.IOS_BUNDLE_ID = v.trim();
+        }
+      } catch {}
       const defaultDir = deviceType === 'android'
         ? '/sdcard/Android/media/com.tencent.uc/BattleRecord/'
         : '/Documents/BattleRecord/';
@@ -152,14 +158,16 @@ function setupIPC(win) {
         await execPromise(`"${adbPath}" -s ${deviceId} shell mkdir -p "${remoteDir}"`);
         const chunkSize = 8 * 1024 * 1024;
         if (fileSize <= chunkSize) {
-          await execPromise(`"${adbPath}" -s ${deviceId} push -a "${filePath}" "${targetPath}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} push "${filePath}" "${targetPath}"`);
           const d = stats.mtime;
           const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
-          await execPromise(`"${adbPath}" -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || "${adbPath}" -s ${deviceId} shell touch "${targetPath}"`);
+          const quoted = targetPath.replace(/'/g, "'\\''");
+          await execPromise(`"${adbPath}" -s ${deviceId} shell sh -c "toybox touch -t ${fmt} '${quoted}' || touch '${quoted}'"`);
         } else {
           const total = Math.ceil(fileSize / chunkSize);
           const buffer = fs.readFileSync(filePath);
           let startIndex = 0;
+          let existingIdxs = [];
           try {
             const { stdout: existing } = await execPromise(`"${adbPath}" -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
             const lines = String(existing).split('\n').filter(Boolean);
@@ -168,6 +176,7 @@ function setupIPC(win) {
               return m ? parseInt(m[1], 10) : -1;
             }).filter(n => n >= 0);
             if (idxs.length > 0) startIndex = Math.max(...idxs) + 1;
+            existingIdxs = idxs;
           } catch {}
           for (let i = startIndex; i < total; i++) {
             const begin = i * chunkSize;
@@ -191,11 +200,41 @@ function setupIPC(win) {
             const eta = speed > 0 ? (fileSize / 1024 / 1024 - transferred / 1024 / 1024) / speed : undefined;
             sendProgress({ progress: Math.round((transferred / fileSize) * 100), speedMbps: speed, etaSeconds: eta, targetPath });
           }
-          const parts = Array.from({ length: Math.ceil(fileSize / chunkSize) }, (_, i) => `${targetPath}.part${i}`).join(' ');
-          await execPromise(`"${adbPath}" -s ${deviceId} shell sh -c "cat ${parts} > \"${targetPath}\" && rm ${parts}"`);
+          const present = new Set(existingIdxs);
+          for (let i = startIndex; i < total; i++) present.add(i);
+          for (let i = 0; i < total; i++) {
+            if (!present.has(i)) {
+              const begin = i * chunkSize;
+              const end = Math.min(begin + chunkSize, fileSize);
+              const tmp = path.join(__dirname, `.__upload_part_${Date.now()}_${i}`);
+              fs.writeFileSync(tmp, buffer.slice(begin, end));
+              const partRemote = `${targetPath}.part${i}`;
+              let tries = 0;
+              while (true) {
+                try {
+                  await execPromise(`"${adbPath}" -s ${deviceId} push "${tmp}" "${partRemote}"`);
+                  break;
+                } catch (e) {
+                  if (++tries >= 3) throw e;
+                }
+              }
+              fs.unlinkSync(tmp);
+            }
+          }
+          try {
+            const { stdout: verifyExisting } = await execPromise(`"${adbPath}" -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
+            const verifyLines = String(verifyExisting).split('\n').filter(Boolean);
+            const verifyIdxs = verifyLines.map(l => { const m = l.match(/\.part(\d+)$/); return m ? parseInt(m[1], 10) : -1; }).filter(n => n >= 0);
+            if (verifyIdxs.length !== total) {
+              throw new Error('分片校验失败');
+            }
+          } catch {}
+          const parts = Array.from({ length: total }, (_, i) => `${targetPath}.part${i}`).map(p => `'${p.replace(/'/g, "'\\''")}'`).join(' ');
+          const quotedTarget = targetPath.replace(/'/g, "'\\''");
+          await execPromise(`"${adbPath}" -s ${deviceId} shell sh -c "cat ${parts} > '${quotedTarget}' && rm ${parts}"`);
           const d = stats.mtime;
           const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
-          await execPromise(`"${adbPath}" -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || "${adbPath}" -s ${deviceId} shell touch "${targetPath}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} shell sh -c "toybox touch -t ${fmt} '${quotedTarget}' || touch '${quotedTarget}'"`);
         }
       } else {
         await deviceManager.pushFileToIOS(deviceId, filePath, remoteDir);

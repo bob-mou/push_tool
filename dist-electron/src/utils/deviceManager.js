@@ -28,7 +28,9 @@ export class DeviceManager {
                 const deviceId = parts[0];
                 const status = parts[1];
                 console.log(`[DeviceManager] Device ID: ${deviceId}, Status: ${status}`);
-                if (deviceId && status === 'device') {
+                if (!deviceId)
+                    continue;
+                if (status === 'device') {
                     try {
                         console.log(`[DeviceManager] Fetching device ${deviceId} details...`);
                         const modelResult = await execPromise(`"${adbPath}" -s ${deviceId} shell getprop ro.product.model`);
@@ -46,13 +48,11 @@ export class DeviceManager {
                     }
                     catch (error) {
                         console.warn(`[DeviceManager] Failed to fetch device ${deviceId} details:`, error);
-                        devices.push({
-                            id: deviceId,
-                            name: deviceId,
-                            type: 'android',
-                            status: 'connected'
-                        });
+                        devices.push({ id: deviceId, name: deviceId, type: 'android', status: 'connected' });
                     }
+                }
+                else if (status === 'unauthorized' || status === 'offline') {
+                    devices.push({ id: deviceId, name: deviceId, type: 'android', status: 'disconnected' });
                 }
             }
             console.log(`[DeviceManager] Found ${devices.length} Android device(s)`);
@@ -63,23 +63,50 @@ export class DeviceManager {
             return [];
         }
     }
+    // 获取iOS设备列表（使用idb）
     async getIOSDevices() {
         try {
             const idbPath = await this.getIdbPath();
             try {
                 const help = await execPromise(`"${idbPath}" --help`);
                 const text = String(help.stdout || help.stderr || '');
-                if (/\blist\b/i.test(text) || /list-targets/i.test(text)) {
+                if (/\blist\b/i.test(text)) {
                     const { stdout } = await execPromise(`"${idbPath}" list`);
-                    const lines = String(stdout || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+                    const rawLines = String(stdout || '').split(/\r?\n/);
+                    let header = rawLines.find(l => /UDID\s+.*NAME/i.test(l)) || '';
+                    const lines = rawLines.map(s => s.replace(/\s+$/, '')).filter(s => s && !/^\s*(UDID|Name|Device|Simulator)/i.test(s));
                     const devices = [];
+                    const colStarts = {};
+                    if (header) {
+                        const cols = ['UDID', 'SerialNumber', 'NAME', 'MarketName', 'ProductVersion', 'ConnType', 'DeviceID', 'Location'];
+                        for (const c of cols) {
+                            const idx = header.indexOf(c);
+                            if (idx >= 0)
+                                colStarts[c] = idx;
+                        }
+                    }
+                    const nameStart = colStarts['NAME'] ?? -1;
+                    const nextCols = ['MarketName', 'ProductVersion', 'ConnType', 'DeviceID', 'Location'];
+                    const possibleNext = nextCols
+                        .map(k => colStarts[k])
+                        .filter((i) => typeof i === 'number' && i > nameStart)
+                        .sort((a, b) => a - b);
+                    const nameEnd = nameStart >= 0 ? (possibleNext[0] ?? undefined) : undefined;
                     for (const l of lines) {
-                        if (/^\s*(UDID|Name|Device|Simulator)/i.test(l)) continue;
                         const m = l.match(/[A-Fa-f0-9]{40}|[A-Za-z0-9-]{24,}/);
-                        if (!m) continue;
+                        if (!m)
+                            continue;
                         const id = m[0];
-                        const name = l.replace(id, '').trim() || id;
-                        devices.push({ id, name, type: 'ios', status: 'connected' });
+                        let name = '';
+                        if (nameStart >= 0) {
+                            name = (nameEnd !== undefined ? l.slice(nameStart, nameEnd) : l.slice(nameStart)).trim();
+                        }
+                        if (!name) {
+                            const rest = l.replace(id, '').trim();
+                            const parts = rest.split(/\s+/);
+                            name = parts[1] ? parts.slice(1).join(' ') : rest;
+                        }
+                        devices.push({ id, name: name || id, type: 'ios', status: 'connected' });
                     }
                     return devices;
                 }
@@ -125,10 +152,11 @@ export class DeviceManager {
     async isIOSToolsAvailable() {
         try {
             const idbPath = await this.getIdbPath();
-            await execPromise(`"${idbPath}" version`);
+            await execPromise(`"${idbPath}" --help`);
             return true;
         }
         catch (error) {
+            console.error('[DeviceManager] Failed to check iOS tools:', error);
             return false;
         }
     }
@@ -219,6 +247,7 @@ export class DeviceManager {
     // 推送文件到iOS设备
     async pushFileToIOS(deviceId, localPath, remotePath) {
         try {
+            // 标准化路径，处理Windows路径分隔符
             let fsLocalPath = path.normalize(localPath);
             if (!path.isAbsolute(fsLocalPath)) {
                 fsLocalPath = path.resolve(process.cwd(), fsLocalPath);
@@ -246,71 +275,130 @@ export class DeviceManager {
                     throw new Error(`无法访问文件: ${fsLocalPath} ${lastErr?.message ? '(' + String(lastErr.message) + ')' : ''}`);
                 }
             }
+            // 验证iOS路径格式
             if (!remotePath.startsWith('/Documents/') && !remotePath.startsWith('/Library/')) {
                 throw new Error('iOS路径必须以/Documents/或/Library/开头');
             }
             const idbPath = await this.getIdbPath();
-            const udidArg = `-u ${deviceId}`;
+            console.log(`使用本地 iDB 工具: ${idbPath}`);
             const settings = await this.getSettings();
-            const iosBundleId = String(settings?.iosBundleId || '').trim();
+            const iosBundleId = String(settings?.iosBundleId || settings?.iosBundleIdentifier || process.env.IOS_BUNDLE_ID || '').trim();
+            if (!iosBundleId) {
+                console.warn('[DeviceManager] 未在设置中找到 iosBundleId/iosBundleIdentifier，请检查配置');
+            }
+            const udidArg = `-u ${deviceId}`;
             if (!iosBundleId) {
                 throw new Error('未配置 iOS 应用包名（bundle id），无法定位应用容器');
             }
-            let appBase = '';
-            try {
-                const info = await execPromise(`"${idbPath}" ${udidArg} appinfo ${iosBundleId}`);
-                const text = String(info.stdout || info.stderr || '');
-                const m = text.match(/\/var\/mobile\/Containers\/Data\/Application\/[A-Za-z0-9-]+/);
-                if (m) appBase = m[0];
-            }
-            catch { }
-            if (!appBase) {
-                throw new Error('无法解析应用容器路径，请确认 bundle id 正确');
-            }
             const fileName = path.basename(normalizedLocalPath);
-            const targetPath = `${appBase}${remotePath.replace(/\/$/, '')}/${fileName}`;
-            try { await execPromise(`"${idbPath}" ${udidArg} fsync mkdir -p "${path.dirname(targetPath)}"`); }
-            catch { }
-            const pushResult = await execPromise(`"${idbPath}" ${udidArg} fsync push "${normalizedLocalPath}" "${targetPath}"`);
+            const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
+            console.log(`开始推送iOS文件: ${normalizedLocalPath} -> ${targetPath}`);
             try {
-                const verifyResult = await execPromise(`"${idbPath}" ${udidArg} ls "${targetPath}"`);
-                if (!verifyResult.stdout || String(verifyResult.stdout).trim().length === 0) {
-                    throw new Error('文件验证失败：远程文件不存在或为空');
+                const parentDir = path.dirname(targetPath);
+                const segs = parentDir.split('/').filter(Boolean);
+                let cur = '';
+                for (const s of segs) {
+                    cur = cur ? `${cur}/${s}` : `/${s}`;
+                    try {
+                        await execPromise(`"${idbPath}" ${udidArg} fsync mkdir "${cur}" -B ${iosBundleId}`);
+                    }
+                    catch { }
                 }
             }
-            catch (verifyError) {
-                throw new Error(`文件推送验证失败: ${verifyError.message}`);
+            catch { }
+            const pushCommand = `"${idbPath}" ${udidArg} fsync push "${normalizedLocalPath}" "${targetPath}" -B ${iosBundleId}`;
+            const pushResult = await execPromise(pushCommand);
+            console.log(`[DeviceManager] iOS file pushed: ${normalizedLocalPath} -> ${targetPath}`);
+            console.log('推送结果:', pushResult.stdout || '无输出');
+            // 严格验证文件推送结果 - 这是防止假成功的关键
+            console.log('[DeviceManager] Verifying file transfer result...');
+            {
+                let ok = false;
+                let lastErr = null;
+                const parentDir = path.dirname(targetPath);
+                const baseName = path.basename(targetPath);
+                for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+                    try {
+                        const r = await execPromise(`"${idbPath}" ${udidArg} fsync stat "${targetPath}" -B ${iosBundleId}`);
+                        const out = String(r.stdout || r.stderr || '').trim();
+                        if (out.length > 0) {
+                            ok = true;
+                            break;
+                        }
+                    }
+                    catch (e) {
+                        lastErr = e;
+                    }
+                    if (!ok) {
+                        try {
+                            const r2 = await execPromise(`"${idbPath}" ${udidArg} fsync ls "${parentDir}" -B ${iosBundleId}`);
+                            const out2 = String(r2.stdout || r2.stderr || '').trim();
+                            if (out2 && out2.includes(baseName)) {
+                                ok = true;
+                                break;
+                            }
+                        }
+                        catch (e2) {
+                            lastErr = e2;
+                        }
+                    }
+                    if (!ok) {
+                        await new Promise(res => setTimeout(res, 300 * (attempt + 1)));
+                    }
+                }
+                if (!ok) {
+                    throw new Error(`文件验证失败: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+                }
             }
         }
         catch (error) {
+            console.error('[DeviceManager] iOS file push failed:', error);
             throw new Error(`iOS推送失败: ${error.message}`);
         }
     }
     // 获取设置配置
     async getSettings() {
         try {
-            // 检查是否在Electron渲染进程中
+            // 1. 优先尝试 Electron 预加载脚本注入的 api
             const w = globalThis.window;
-            if (w && w.electronAPI) {
+            if (w?.electronAPI?.getSettings) {
                 return await w.electronAPI.getSettings();
             }
-            // 检查是否在Node.js环境中
-            const g = globalThis.global || globalThis;
-            if (g && g.electronAPI) {
+            // 2. 再试 Node 全局
+            const g = globalThis.global;
+            if (g?.electronAPI?.getSettings) {
                 return await g.electronAPI.getSettings();
             }
-            // 降级到默认值（用于测试和独立运行）
-            return {
-                iosToolsPath: '',
-                adbPath: ''
-            };
+            // 3. 如果以上都没有，尝试用 IPC 主动询问主进程（渲染进程专用）
+            if (w?.electron?.ipcRenderer) {
+                return await w.electron.ipcRenderer.invoke('get-settings');
+            }
+            // 4. 兜底：生成并读本地 JSON 配置文件（独立运行或测试时）
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const configFile = path.resolve(process.cwd(), 'settings.json');
+            try {
+                const txt = await fs.readFile(configFile, 'utf-8');
+                const parsed = JSON.parse(txt);
+                const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+                if (envBundle && !parsed.iosBundleId) {
+                    return { ...parsed, iosBundleId: envBundle };
+                }
+                return parsed;
+            }
+            catch (error) {
+                // 文件不存在或解析失败，生成默认配置
+                console.warn('文件不存在或解析失败，生成默认配置', error);
+                const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+                const defaultSettings = { iosToolsPath: '', adbPath: '', iosBundleId: envBundle || 'com.tencent.uc' };
+                await fs.writeFile(configFile, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+                return defaultSettings;
+            }
         }
         catch (error) {
-            console.warn('无法获取设置，使用默认值:', error);
-            return {
-                iosToolsPath: '',
-                adbPath: ''
-            };
+            console.warn('[DeviceManager] 无法获取设置，使用空默认值:', error);
+            const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+            return { iosToolsPath: '', adbPath: '', iosBundleId: envBundle || 'com.tencent.uc' };
         }
     }
     async getIdbPath() {
@@ -325,17 +413,29 @@ export class DeviceManager {
             }
         }
         catch { }
-        try { candidates.push(path.join(process.cwd(), execName)); }
+        try {
+            candidates.push(path.join(process.cwd(), execName));
+        }
         catch { }
-        try { candidates.push(path.join(__dirname, '..', execName)); }
+        try {
+            candidates.push(path.join(__dirname, '..', execName));
+        }
         catch { }
-        try { candidates.push(path.join(process.cwd(), 'idb', execName)); }
+        try {
+            candidates.push(path.join(process.cwd(), 'idb', execName));
+        }
         catch { }
-        try { candidates.push(path.join(process.cwd(), 'src', 'idb', execName)); }
+        try {
+            candidates.push(path.join(process.cwd(), 'src', 'idb', execName));
+        }
         catch { }
-        try { candidates.push(path.join(__dirname, '..', 'idb', execName)); }
+        try {
+            candidates.push(path.join(__dirname, '..', 'idb', execName));
+        }
         catch { }
-        try { candidates.push(path.join(__dirname, '..', '..', 'src', 'idb', execName)); }
+        try {
+            candidates.push(path.join(__dirname, '..', '..', 'src', 'idb', execName));
+        }
         catch { }
         try {
             const w = globalThis.window;
@@ -359,40 +459,12 @@ export class DeviceManager {
             }
             catch { }
         }
+        // 最后尝试系统路径
         return execName;
     }
-
-    async getIdeviceIdPath() {
-        const isWin = process.platform === 'win32';
-        const execName = isWin ? 'idevice_id.exe' : 'idevice_id';
-        const candidates = [];
-        try { candidates.push(path.join(process.cwd(), execName)); }
-        catch { }
-        try { candidates.push(path.join(__dirname, '..', execName)); }
-        catch { }
-        try { candidates.push(path.join(process.cwd(), 'idevice', execName)); }
-        catch { }
-        try { candidates.push(path.join(process.cwd(), 'src', 'idevice', execName)); }
-        catch { }
-        try { candidates.push(path.join(__dirname, '..', 'idevice', execName)); }
-        catch { }
-        try { candidates.push(path.join(__dirname, '..', '..', 'src', 'idevice', execName)); }
-        catch { }
-        for (const p of candidates) {
-            try {
-                if (p && fs.existsSync(p)) {
-                    const dir = path.dirname(p);
-                    this.ensureInPath(dir);
-                    return p.replace(/\\/g, '/');
-                }
-            }
-            catch { }
-        }
-        return execName;
-    }
-
     ensureInPath(dir) {
-        if (!dir) return;
+        if (!dir)
+            return;
         const sep = process.platform === 'win32' ? ';' : ':';
         const cur = String(process.env.PATH || '');
         const parts = cur.split(sep).filter(Boolean);

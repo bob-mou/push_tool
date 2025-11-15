@@ -4,20 +4,23 @@
 
 
   "directories": {
-    "output": "dist"
+    "output": "release-out"
   },
   "files": [
     "build/**/*",
     "electron/**/*",
+    "dist-electron/**/*",
     "node_modules/**/*",
     "package.json"
   ],
   "extraMetadata": {
-    "main": "electron/main.js"
+    "main": "electron/main-simple.js"
   },
+  "electronVersion": "33.2.0",
   "win": {
     "target": "nsis",
-    "icon": "build/icon.ico"
+    "icon": "build/icon.ico",
+    "executableName": "files-push"
   },
   "nsis": {
     "oneClick": false,

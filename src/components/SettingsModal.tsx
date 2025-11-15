@@ -232,6 +232,25 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
               <div className="space-y-1.5">
                 <div className="flex items-center space-x-1.5">
+                  <FileCog className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">iOS 应用 Bundle ID</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <input
+                    value={localSettings.iosBundleId || ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setLocalSettings(prev => ({ ...prev, iosBundleId: v }));
+                    }}
+                    placeholder="例: com.example.app"
+                    className={`flex-1 px-3 py-2 rounded border border-gray-300 focus:outline-none`}
+                  />
+                </div>
+                <div className="text-xs text-gray-500">用于定位应用容器，例如 com.tencent.uc</div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center space-x-1.5">
                   <FolderOpen className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">文件保存目录</span>
                 </div>

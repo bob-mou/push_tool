@@ -3,9 +3,7 @@ import fs from 'fs';
 
 export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
   const docs = getPathFn('documents');
-  const saveDir = platform === 'win32'
-    ? 'D:\\workplace\\push_files_tool_temp'
-    : path.join(docs, 'FilesPush');
+  const saveDir ='D:\\workplace\\push_files_tool_temp';
   let adbPath = '';
   let idbPath = '';
   try {
@@ -24,7 +22,11 @@ export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
       const localIdb = path.join(appDir, 'src', 'idb', 'idb');
       if (fs.existsSync(localIdb)) idbPath = localIdb;
     }
-  } catch {}
+  } catch {
+    console.warn('[SettingsDefaults] 无法获取 adb/idb 路径，使用默认值');
+    adbPath = 'D:\\Android\\Sdk\\platform-tools\\adb.exe';
+    idbPath = 'D:\\IOS\\idb\\idb.exe';
+  }
   
   // 默认传输路径配置
   const defaultTransferPaths = {

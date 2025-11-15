@@ -50,7 +50,6 @@ export class DeviceManager {
         console.log(`[DeviceManager] Device ID: ${deviceId}, Status: ${status}`);
         
         if (!deviceId) continue;
-        const normalizedStatus = status === 'device' ? 'connected' : 'disconnected';
         if (status === 'device') {
           try {
             console.log(`[DeviceManager] Fetching device ${deviceId} details...`);
@@ -317,33 +316,30 @@ export class DeviceManager {
       console.log(`使用本地 iDB 工具: ${idbPath}`);
 
       const settings = await this.getSettings();
-      const iosBundleId: string = String(settings?.iosBundleId || '').trim();
+      const iosBundleId: string = String(settings?.iosBundleId || settings?.iosBundleIdentifier || process.env.IOS_BUNDLE_ID || '').trim();
+      if (!iosBundleId) {
+        console.warn('[DeviceManager] 未在设置中找到 iosBundleId/iosBundleIdentifier，请检查配置');
+      }
       const udidArg = `-u ${deviceId}`;
 
       if (!iosBundleId) {
         throw new Error('未配置 iOS 应用包名（bundle id），无法定位应用容器');
       }
 
-      let appBase = '';
-      try {
-        const info = await execPromise(`"${idbPath}" ${udidArg} appinfo ${iosBundleId}`);
-        const text = String(info.stdout || info.stderr || '');
-        const m = text.match(/\/var\/mobile\/Containers\/Data\/Application\/[A-Za-z0-9-]+/);
-        if (m) appBase = m[0];
-      } catch {}
-      if (!appBase) {
-        throw new Error('无法解析应用容器路径，请确认 bundle id 正确');
-      }
-
-      
       const fileName = path.basename(normalizedLocalPath);
-      const targetPath = `${appBase}${remotePath.replace(/\/$/, '')}/${fileName}`;
-      
+      const targetPath = `${remotePath.replace(/\/$/, '')}/${fileName}`;
       console.log(`开始推送iOS文件: ${normalizedLocalPath} -> ${targetPath}`);
       
-      const mkdirCmd = `"${idbPath}" ${udidArg} fsync mkdir -p "${path.dirname(targetPath)}"`;
-      try { await execPromise(mkdirCmd); } catch {}
-      const pushCommand = `"${idbPath}" ${udidArg} fsync push "${normalizedLocalPath}" "${targetPath}"`;
+      try {
+        const parentDir = path.dirname(targetPath);
+        const segs = parentDir.split('/').filter(Boolean);
+        let cur = '';
+        for (const s of segs) {
+          cur = cur ? `${cur}/${s}` : `/${s}`;
+          try { await execPromise(`"${idbPath}" ${udidArg} fsync mkdir "${cur}" -B ${iosBundleId}`); } catch {}
+        }
+      } catch {}
+      const pushCommand = `"${idbPath}" ${udidArg} fsync push "${normalizedLocalPath}" "${targetPath}" -B ${iosBundleId}`;
       const pushResult = await execPromise(pushCommand);
       
       console.log(`[DeviceManager] iOS file pushed: ${normalizedLocalPath} -> ${targetPath}`);
@@ -351,24 +347,41 @@ export class DeviceManager {
       
       // 严格验证文件推送结果 - 这是防止假成功的关键
       console.log('[DeviceManager] Verifying file transfer result...');
-      try {
-        const verifyCommand = `"${idbPath}" ${udidArg} ls "${targetPath}"`;
-        const verifyResult = await execPromise(verifyCommand);
-        console.log(`[DeviceManager] iOS file verification success: ${verifyResult.stdout.trim()}`);
-        
-        // 额外验证：检查文件大小
-        const localStats = fs.statSync(fsLocalPath);
-        const lsResult = await execPromise(verifyCommand);
-        console.log(`远程文件详情: ${lsResult.stdout.trim()}`);
-        
-        // 如果验证输出为空或包含错误，则抛出异常
-        if (!verifyResult.stdout || verifyResult.stdout.trim().length === 0) {
-          throw new Error('文件验证失败：远程文件不存在或为空');
+      {
+        let ok = false;
+        let lastErr: any = null;
+        const parentDir = path.dirname(targetPath);
+        const baseName = path.basename(targetPath);
+        for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+          try {
+            const r = await execPromise(`"${idbPath}" ${udidArg} fsync stat "${targetPath}" -B ${iosBundleId}`);
+            const out = String(r.stdout || r.stderr || '').trim();
+            if (out.length > 0) {
+              ok = true;
+              break;
+            }
+          } catch (e) {
+            lastErr = e;
+          }
+          if (!ok) {
+            try {
+              const r2 = await execPromise(`"${idbPath}" ${udidArg} fsync ls "${parentDir}" -B ${iosBundleId}`);
+              const out2 = String(r2.stdout || r2.stderr || '').trim();
+              if (out2 && out2.includes(baseName)) {
+                ok = true;
+                break;
+              }
+            } catch (e2) {
+              lastErr = e2;
+            }
+          }
+          if (!ok) {
+            await new Promise(res => setTimeout(res, 300 * (attempt + 1)));
+          }
         }
-        
-      } catch (verifyError) {
-        console.error('[DeviceManager] iOS file verification failed:', verifyError);
-        throw new Error(`文件推送验证失败: ${verifyError.message}`);
+        if (!ok) {
+          throw new Error(`文件验证失败: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+        }
       }
       
     } catch (error) {
@@ -380,29 +393,47 @@ export class DeviceManager {
   // 获取设置配置
   private async getSettings(): Promise<any> {
     try {
-      // 检查是否在Electron渲染进程中
+      // 1. 优先尝试 Electron 预加载脚本注入的 api
       const w = (globalThis as any).window;
-      if (w && w.electronAPI) {
+      if (w?.electronAPI?.getSettings) {
         return await w.electronAPI.getSettings();
       }
-      
-      // 检查是否在Node.js环境中
-      const g = (globalThis as any).global || globalThis;
-      if (g && g.electronAPI) {
+
+      // 2. 再试 Node 全局
+      const g = (globalThis as any).global;
+      if (g?.electronAPI?.getSettings) {
         return await g.electronAPI.getSettings();
       }
-      
-      // 降级到默认值（用于测试和独立运行）
-      return {
-        iosToolsPath: '',
-        adbPath: ''
-      };
+
+      // 3. 如果以上都没有，尝试用 IPC 主动询问主进程（渲染进程专用）
+      if (w?.electron?.ipcRenderer) {
+        return await w.electron.ipcRenderer.invoke('get-settings');
+      }
+
+      // 4. 兜底：生成并读本地 JSON 配置文件（独立运行或测试时）
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const configFile = path.resolve(process.cwd(), 'settings.json');
+      try {
+        const txt = await fs.readFile(configFile, 'utf-8');
+        const parsed = JSON.parse(txt);
+        const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+        if (envBundle && !parsed.iosBundleId) {
+          return { ...parsed, iosBundleId: envBundle };
+        }
+        return parsed;
+      } catch (error){
+        // 文件不存在或解析失败，生成默认配置
+        console.warn('文件不存在或解析失败，生成默认配置', error);
+        const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+        const defaultSettings = { iosToolsPath: '', adbPath: '', iosBundleId: envBundle || 'com.tencent.uc' };
+        await fs.writeFile(configFile, JSON.stringify(defaultSettings, null, 2), 'utf-8');
+        return defaultSettings;
+      }
     } catch (error) {
-      console.warn('无法获取设置，使用默认值:', error);
-      return {
-        iosToolsPath: '',
-        adbPath: ''
-      };
+      console.warn('[DeviceManager] 无法获取设置，使用空默认值:', error);
+      const envBundle = typeof process.env.IOS_BUNDLE_ID === 'string' ? process.env.IOS_BUNDLE_ID.trim() : '';
+      return { iosToolsPath: '', adbPath: '', iosBundleId: envBundle || 'com.tencent.uc' };
     }
   }
 
@@ -447,27 +478,6 @@ export class DeviceManager {
     return execName;
   }
 
-  private async getIdeviceIdPath(): Promise<string> {
-    const isWin = process.platform === 'win32';
-    const execName = isWin ? 'idevice_id.exe' : 'idevice_id';
-    const candidates: string[] = [];
-    try { candidates.push(path.join(process.cwd(), execName)); } catch {}
-    try { candidates.push(path.join(__dirname, '..', execName)); } catch {}
-    try { candidates.push(path.join(process.cwd(), 'idevice', execName)); } catch {}
-    try { candidates.push(path.join(process.cwd(), 'src', 'idevice', execName)); } catch {}
-    try { candidates.push(path.join(__dirname, '..', 'idevice', execName)); } catch {}
-    try { candidates.push(path.join(__dirname, '..', '..', 'src', 'idevice', execName)); } catch {}
-    for (const p of candidates) {
-      try {
-        if (p && fs.existsSync(p)) {
-          const dir = path.dirname(p);
-          this.ensureInPath(dir);
-          return p.replace(/\\/g, '/');
-        }
-      } catch {}
-    }
-    return execName;
-  }
 
   private ensureInPath(dir: string) {
     if (!dir) return;
