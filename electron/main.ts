@@ -201,7 +201,14 @@ ipcMain.handle('open-help', async () => {
 });
 
 // 设备监控相关函数
+let isDeviceMonitorSetup = false;
+
 function setupDeviceMonitor() {
+  if (isDeviceMonitorSetup) {
+    console.log('设备监控已设置，跳过重复设置');
+    return;
+  }
+
   // 监听设备状态变化事件
   deviceMonitor.on('deviceStatusChanged', (event) => {
     console.log('设备状态变化:', event);
@@ -224,6 +231,7 @@ function setupDeviceMonitor() {
 
   // 启动设备监控
   deviceMonitor.start();
+  isDeviceMonitorSetup = true;
 }
 
 // 停止设备监控
@@ -241,8 +249,10 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
-      // 重新设置设备监控
-      setupDeviceMonitor();
+      // 窗口重新创建后，确保设备监控仍在运行
+      if (!deviceMonitor.isRunning()) {
+        setupDeviceMonitor();
+      }
     }
   });
 });

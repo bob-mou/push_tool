@@ -16,10 +16,12 @@ export class DeviceManager {
             const settings = await this.getSettings();
             const adbPath = settings.adbPath || 'adb';
             const { stdout } = await execPromise(`"${adbPath}" devices`);
-            const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices'));
+            const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices') && line.includes('device'));
             const devices = [];
             for (const line of lines) {
-                const [deviceId, status] = line.split('\t');
+                const parts = line.trim().split(/\s+/);
+                const deviceId = parts[0];
+                const status = parts[1];
                 if (deviceId && status === 'device') {
                     try {
                         // 获取设备详细信息
@@ -240,13 +242,23 @@ export class DeviceManager {
                 path.join(iosToolsPath, 'idevicefs').replace(/\\/g, '/') :
                 'idevicefs';
             console.log(`使用iOS工具路径: ${idevicefsPath}`);
-            // 首先检查iOS工具是否可用
+            // 首先检查iOS工具是否可用 - 这是关键步骤
             try {
                 await execPromise(`"${idevicefsPath}" --help`);
+                console.log(`✅ iOS工具验证成功: ${idevicefsPath}`);
             }
             catch (toolError) {
-                console.error('iOS工具不可用:', toolError);
-                throw new Error(`iOS文件传输工具不可用: ${idevicefsPath}。请在设置中配置正确的iOS工具路径，或确保idevicefs已添加到系统PATH中。`);
+                console.error('❌ iOS工具不可用:', toolError);
+                throw new Error(`iOS文件传输工具不可用: ${idevicefsPath}。请在设置中配置正确的iOS工具路径，或确保libimobiledevice工具包已正确安装。`);
+            }
+            // 验证设备连接
+            try {
+                await execPromise(`"${idevicefsPath}" -u ${deviceId} ls "/"`);
+                console.log(`✅ iOS设备连接验证成功: ${deviceId}`);
+            }
+            catch (deviceError) {
+                console.error('❌ iOS设备连接验证失败:', deviceError);
+                throw new Error(`无法连接到iOS设备: ${deviceId}。请确保设备已连接并信任此电脑。`);
             }
             // 首先创建远程目录
             const mkdirCommand = `"${idevicefsPath}" -u ${deviceId} mkdir "${remotePath}"`;
@@ -256,7 +268,7 @@ export class DeviceManager {
             }
             catch (mkdirError) {
                 // 目录可能已存在，继续执行
-                console.log(`目录可能已存在: ${mkdirError}`);
+                console.log(`⏭️ 目录可能已存在，继续推送: ${mkdirError.message}`);
             }
             // 推送文件
             const fileName = path.basename(normalizedLocalPath);
@@ -264,20 +276,32 @@ export class DeviceManager {
             console.log(`开始推送iOS文件: ${normalizedLocalPath} -> ${targetPath}`);
             // 使用配置的iOS工具路径推送文件
             const pushCommand = `"${idevicefsPath}" -u ${deviceId} put "${normalizedLocalPath}" "${targetPath}"`;
-            await execPromise(pushCommand);
-            console.log(`iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
-            // 验证文件推送结果
+            const pushResult = await execPromise(pushCommand);
+            console.log(`✅ iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
+            console.log('推送结果:', pushResult.stdout || '无输出');
+            // 严格验证文件推送结果 - 这是防止假成功的关键
+            console.log('🔍 验证文件传输结果...');
             const verifyCommand = `"${idevicefsPath}" -u ${deviceId} ls "${targetPath}"`;
             try {
                 const verifyResult = await execPromise(verifyCommand);
-                console.log(`iOS文件验证成功: ${verifyResult.stdout}`);
+                console.log(`✅ iOS文件验证成功: ${verifyResult.stdout.trim()}`);
+                // 额外验证：检查文件大小
+                const localStats = fs.statSync(normalizedLocalPath);
+                const lsCommand = `"${idevicefsPath}" -u ${deviceId} ls -la "${targetPath}"`;
+                const lsResult = await execPromise(lsCommand);
+                console.log(`远程文件详情: ${lsResult.stdout.trim()}`);
+                // 如果验证输出为空或包含错误，则抛出异常
+                if (!verifyResult.stdout || verifyResult.stdout.trim().length === 0) {
+                    throw new Error('文件验证失败：远程文件不存在或为空');
+                }
             }
             catch (verifyError) {
-                console.warn(`iOS文件验证警告: ${verifyError}`);
+                console.error('❌ iOS文件验证失败:', verifyError);
+                throw new Error(`文件推送验证失败: ${verifyError.message}`);
             }
         }
         catch (error) {
-            console.error('iOS文件推送失败:', error);
+            console.error('❌ iOS文件推送失败:', error);
             throw new Error(`iOS推送失败: ${error.message}`);
         }
     }

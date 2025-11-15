@@ -28,45 +28,59 @@ export class DeviceManager {
   // 获取Android设备列表
   private async getAndroidDevices(): Promise<Device[]> {
     try {
+      console.log('🔍 [DeviceManager] 开始获取Android设备...');
       const settings = await this.getSettings();
       const adbPath = settings.adbPath || 'adb';
       
       const { stdout } = await execPromise(`"${adbPath}" devices`);
+      console.log('📋 [DeviceManager] ADB输出:', stdout);
+      
       const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices'));
+      console.log('📋 [DeviceManager] 处理行数:', lines.length);
       
       const devices: Device[] = [];
       
       for (const line of lines) {
-        const [deviceId, status] = line.split('\t');
+        console.log('📋 [DeviceManager] 处理行:', line);
+        const parts = line.trim().split(/\s+/);
+        const deviceId = parts[0];
+        const status = parts[1];
+        
+        console.log(`📋 [DeviceManager] 设备ID: ${deviceId}, 状态: ${status}`);
+        
         if (deviceId && status === 'device') {
           try {
-            // 获取设备详细信息
+            console.log(`📋 [DeviceManager] 获取设备 ${deviceId} 详细信息...`);
             const modelResult = await execPromise(`"${adbPath}" -s ${deviceId} shell getprop ro.product.model`);
             const manufacturerResult = await execPromise(`"${adbPath}" -s ${deviceId} shell getprop ro.product.manufacturer`);
             
-            devices.push({
+            const device = {
               id: deviceId,
               name: `${manufacturerResult.stdout.trim()} ${modelResult.stdout.trim()}`,
-              type: 'android',
-              status: 'connected',
+              type: 'android' as const,
+              status: 'connected' as const,
               model: modelResult.stdout.trim(),
               manufacturer: manufacturerResult.stdout.trim()
-            });
+            };
+            
+            console.log('📋 [DeviceManager] 发现设备:', device);
+            devices.push(device);
           } catch (error) {
-            // 如果获取详细信息失败，使用设备ID作为名称
+            console.warn(`⚠️ [DeviceManager] 获取设备 ${deviceId} 详细信息失败:`, error);
             devices.push({
               id: deviceId,
               name: deviceId,
-              type: 'android',
-              status: 'connected'
+              type: 'android' as const,
+              status: 'connected' as const
             });
           }
         }
       }
       
+      console.log(`📋 [DeviceManager] 最终发现 ${devices.length} 个Android设备`);
       return devices;
     } catch (error) {
-      console.error('获取Android设备失败:', error);
+      console.error('❌ [DeviceManager] 获取Android设备失败:', error);
       return [];
     }
   }
@@ -121,12 +135,22 @@ export class DeviceManager {
 
   // 获取所有连接的设备
   async getConnectedDevices(): Promise<Device[]> {
-    const [androidDevices, iosDevices] = await Promise.all([
-      this.getAndroidDevices(),
-      this.getIOSDevices()
-    ]);
+    console.log('🔍 [DeviceManager] 开始获取所有连接的设备...');
     
-    return [...androidDevices, ...iosDevices];
+    try {
+      const [androidDevices, iosDevices] = await Promise.all([
+        this.getAndroidDevices(),
+        this.getIOSDevices()
+      ]);
+      
+      const allDevices = [...androidDevices, ...iosDevices];
+      console.log(`🔍 [DeviceManager] 总共发现 ${allDevices.length} 个设备`);
+      
+      return allDevices;
+    } catch (error) {
+      console.error('❌ [DeviceManager] 获取设备列表失败:', error);
+      return [];
+    }
   }
 
   // 检查ADB是否可用
@@ -282,22 +306,33 @@ export class DeviceManager {
 
       console.log(`使用iOS工具路径: ${idevicefsPath}`);
       
-      // 首先检查iOS工具是否可用
+      // 首先检查iOS工具是否可用 - 这是关键步骤
       try {
         await execPromise(`"${idevicefsPath}" --help`);
+        console.log(`✅ iOS工具验证成功: ${idevicefsPath}`);
       } catch (toolError) {
-        console.error('iOS工具不可用:', toolError);
-        throw new Error(`iOS文件传输工具不可用: ${idevicefsPath}。请在设置中配置正确的iOS工具路径，或确保idevicefs已添加到系统PATH中。`);
+        console.error('❌ iOS工具不可用:', toolError);
+        throw new Error(`iOS文件传输工具不可用: ${idevicefsPath}。请在设置中配置正确的iOS工具路径，或确保libimobiledevice工具包已正确安装。`);
       }
       
-      // 首先创建远程目录
+      // 验证设备连接
+      try {
+        await execPromise(`"${idevicefsPath}" -u ${deviceId} ls "/"`);
+        console.log(`✅ iOS设备连接验证成功: ${deviceId}`);
+      } catch (deviceError) {
+        console.error('❌ iOS设备连接验证失败:', deviceError);
+        throw new Error(`无法连接到iOS设备: ${deviceId}。请确保设备已连接并信任此电脑。`);
+      }
+      
+      // 创建远程目录
       const mkdirCommand = `"${idevicefsPath}" -u ${deviceId} mkdir "${remotePath}"`;
       console.log(`创建iOS远程目录: ${mkdirCommand}`);
       try {
         await execPromise(mkdirCommand);
+        console.log('✅ 远程目录创建成功');
       } catch (mkdirError) {
         // 目录可能已存在，继续执行
-        console.log(`目录可能已存在: ${mkdirError}`);
+        console.log(`⏭️ 目录可能已存在，继续推送: ${mkdirError.message}`);
       }
       
       // 推送文件
@@ -308,21 +343,36 @@ export class DeviceManager {
       
       // 使用配置的iOS工具路径推送文件
       const pushCommand = `"${idevicefsPath}" -u ${deviceId} put "${normalizedLocalPath}" "${targetPath}"`;
-      await execPromise(pushCommand);
+      const pushResult = await execPromise(pushCommand);
       
-      console.log(`iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
+      console.log(`✅ iOS文件推送成功: ${normalizedLocalPath} -> ${targetPath}`);
+      console.log('推送结果:', pushResult.stdout || '无输出');
       
-      // 验证文件推送结果
+      // 严格验证文件推送结果 - 这是防止假成功的关键
+      console.log('🔍 验证文件传输结果...');
       const verifyCommand = `"${idevicefsPath}" -u ${deviceId} ls "${targetPath}"`;
       try {
         const verifyResult = await execPromise(verifyCommand);
-        console.log(`iOS文件验证成功: ${verifyResult.stdout}`);
+        console.log(`✅ iOS文件验证成功: ${verifyResult.stdout.trim()}`);
+        
+        // 额外验证：检查文件大小
+        const localStats = fs.statSync(normalizedLocalPath);
+        const lsCommand = `"${idevicefsPath}" -u ${deviceId} ls -la "${targetPath}"`;
+        const lsResult = await execPromise(lsCommand);
+        console.log(`远程文件详情: ${lsResult.stdout.trim()}`);
+        
+        // 如果验证输出为空或包含错误，则抛出异常
+        if (!verifyResult.stdout || verifyResult.stdout.trim().length === 0) {
+          throw new Error('文件验证失败：远程文件不存在或为空');
+        }
+        
       } catch (verifyError) {
-        console.warn(`iOS文件验证警告: ${verifyError}`);
+        console.error('❌ iOS文件验证失败:', verifyError);
+        throw new Error(`文件推送验证失败: ${verifyError.message}`);
       }
       
     } catch (error) {
-      console.error('iOS文件推送失败:', error);
+      console.error('❌ iOS文件推送失败:', error);
       throw new Error(`iOS推送失败: ${(error as any).message}`);
     }
   }

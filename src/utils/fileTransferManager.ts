@@ -38,9 +38,20 @@ export class FileTransferManager {
   private saveDir: string;
 
   private constructor() {
-    this.tempDir = path.join(os.tmpdir(), 'file-push-temp');
     this.saveDir = this.getDefaultSaveDir();
+    this.tempDir = path.join(this.saveDir, '.temp');
     this.ensureDirectories();
+  }
+
+  /**
+   * 使用设置初始化文件传输管理器
+   */
+  static initializeWithSettings(settings: { saveDir?: string }): FileTransferManager {
+    const instance = FileTransferManager.getInstance();
+    if (settings.saveDir) {
+      instance.setSaveDir(settings.saveDir);
+    }
+    return instance;
   }
 
   static getInstance(): FileTransferManager {
@@ -65,7 +76,9 @@ export class FileTransferManager {
    */
   setSaveDir(saveDir: string): void {
     this.saveDir = saveDir;
+    this.tempDir = path.join(this.saveDir, '.temp');
     fs.ensureDirSync(this.saveDir);
+    fs.ensureDirSync(this.tempDir);
   }
 
   /**

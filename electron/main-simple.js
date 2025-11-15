@@ -5,6 +5,7 @@ import fs from 'fs';
 import { exec, execSync } from 'child_process';
 import Store from 'electron-store';
 import { DeviceManager } from '../dist-electron/src/utils/deviceManager.js';
+import { DeviceMonitor } from '../dist-electron/src/utils/deviceMonitor.js';
 import { computeDefaultSettingsFor, validatePathValue } from './settings-defaults.js';
 import { TransferPathManager } from '../dist-electron/src/utils/transferPathManager.js';
 
@@ -34,6 +35,8 @@ function createWindow() {
 
   // 设置IPC处理程序
   setupIPC(win);
+
+  setupDeviceMonitor(win);
 }
 
 function setupIPC(win) {
@@ -186,7 +189,8 @@ function setupIPC(win) {
   ipcMain.handle('materialize-file', async (event, { fileName, data }) => {
     try {
       const base = path.basename(String(fileName || 'file'));
-      const tempDir = path.join(app.getPath('temp'), 'FilesPushTemp');
+      const saveDir = store.get('saveDir') || path.join(app.getPath('documents'), 'FilesPush');
+      const tempDir = path.join(saveDir, '.temp');
       fs.mkdirSync(tempDir, { recursive: true });
       const out = path.join(tempDir, base);
       let buf;
@@ -479,6 +483,25 @@ function setupIPC(win) {
       return { success: false, error: e?.message || '保存失败' };
     }
   });
+}
+
+let isDeviceMonitorSetup = false;
+
+function setupDeviceMonitor(win) {
+  if (isDeviceMonitorSetup) return;
+  const monitor = DeviceMonitor.getInstance();
+  monitor.on('deviceStatusChanged', (event) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('device-status-changed', event);
+    }
+  });
+  monitor.on('error', (error) => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('device-monitor-error', error.message);
+    }
+  });
+  monitor.start();
+  isDeviceMonitorSetup = true;
 }
 
 app.whenReady().then(createWindow);

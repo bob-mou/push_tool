@@ -73,6 +73,16 @@ const electronAPI = {
   },
   saveLocalFile: (params) => {
     return ipcRenderer.invoke('save-local-file', params);
+  },
+  onDeviceStatusChanged: (cb) => {
+    const listener = (_e, payload) => cb(payload);
+    ipcRenderer.on('device-status-changed', listener);
+    return () => ipcRenderer.removeListener('device-status-changed', listener);
+  },
+  onDeviceMonitorError: (cb) => {
+    const listener = (_e, message) => cb(message);
+    ipcRenderer.on('device-monitor-error', listener);
+    return () => ipcRenderer.removeListener('device-monitor-error', listener);
   }
 };
 
