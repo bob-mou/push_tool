@@ -13,7 +13,7 @@ const deviceMonitor = DeviceMonitor.getInstance();
 const isDev = process.env.NODE_ENV === 'development';
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 560,
+        width: 460,
         height: 360,
         frame: false,
         resizable: true,

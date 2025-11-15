@@ -197,7 +197,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       </div>
 
       {/* 操作按钮 */}
-      <div className="flex justify-between pt-3 border-t">
+      <div className="flex justify-between  pt-3 border-t">
         <button
           onClick={resetToDefault}
           className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"

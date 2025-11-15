@@ -32,6 +32,10 @@ interface AppState {
     iosToolsPath?: string;
     iosBundleId?: string;
     iosIdbMode?: 'facebook' | 'i4';
+    pollingInterval?: number;
+    enableADB?: boolean;
+    enableIOS?: boolean;
+    maxRetries?: number;
   };
   
   // Actions
@@ -59,7 +63,11 @@ export const useStore = create<AppState>()(
         saveDir: '',
         iosToolsPath: '',
         iosBundleId: '',
-        iosIdbMode: 'i4'
+        iosIdbMode: 'i4',
+        pollingInterval: 5000,
+        enableADB: true,
+        enableIOS: true,
+        maxRetries: 3
       },
       setDevices: (devices) => set({ devices }),
       setSelectedDevice: (selectedDevice) => set({ selectedDevice }),

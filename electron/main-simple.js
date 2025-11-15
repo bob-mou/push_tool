@@ -13,6 +13,7 @@ import { TransferPathManager } from '../dist-electron/src/utils/transferPathMana
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const isDev = process.env.NODE_ENV === 'development';
 
 // 初始化设备管理器
 const deviceManager = DeviceManager.getInstance();
@@ -49,16 +50,20 @@ async function createWindow() {
     throw new Error('dev server not ready');
   };
 
-  try {
-    await waitFor(target);
-    console.log('[Main] Dev server ready, loading', target);
-    win.loadURL(target);
-  } catch {
-    console.log('[Main] Dev server not ready, fallback to build/index.html');
+  if (isDev) {
+    try {
+      await waitFor(target);
+      win.loadURL(target);
+    } catch {
+      try { win.loadFile(path.join(__dirname, '../build/index.html')); } catch {}
+    }
+  } else {
     try { win.loadFile(path.join(__dirname, '../build/index.html')); } catch {}
   }
 
-  win.webContents.openDevTools();
+  if (String(process.env.OPEN_DEVTOOLS || '').trim() === '1') {
+    try { win.webContents.openDevTools(); } catch {}
+  }
 
   // 设置IPC处理程序
   setupIPC(win);
@@ -71,6 +76,9 @@ function setupIPC(win) {
     name: 'settings',
     defaults: computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync)
   });
+  try {
+    autoDetectTools(store);
+  } catch {}
   try {
     const v = store.get('iosBundleId');
     if (typeof v !== 'string' || !v.trim()) {
@@ -359,10 +367,26 @@ function setupIPC(win) {
       if (!b) next.iosBundleId = defaults.iosBundleId;
       store.set(next);
       try {
-        const p = String(next?.iosToolsPath || '').trim();
-        if (p) {
-          const dir = path.dirname(p);
+        const pIos = String(next?.iosToolsPath || '').trim();
+        if (pIos) {
+          const dir = path.dirname(pIos);
           ensureInPath(dir);
+        }
+        const pAdb = String(next?.adbPath || '').trim();
+        if (pAdb) {
+          const dirA = path.dirname(pAdb);
+          ensureInPath(dirA);
+        }
+      } catch {}
+      try {
+        const monitor = DeviceMonitor.getInstance();
+        const cfg = {};
+        if (typeof next.pollingInterval === 'number') cfg.pollingInterval = next.pollingInterval;
+        if (typeof next.enableADB === 'boolean') cfg.enableADB = next.enableADB;
+        if (typeof next.enableIOS === 'boolean') cfg.enableIOS = next.enableIOS;
+        if (typeof next.maxRetries === 'number') cfg.maxRetries = next.maxRetries;
+        if (Object.keys(cfg).length > 0) {
+          monitor.updateConfig(cfg);
         }
       } catch {}
       return next;
@@ -532,7 +556,11 @@ function setupIPC(win) {
         preload: path.join(__dirname, 'preload-simple.js')
       }
     });
-    helpWin.loadURL('http://localhost:5173/#/help');
+    if (isDev) {
+      helpWin.loadURL('http://localhost:5173/#/help');
+    } else {
+      try { helpWin.loadFile(path.join(__dirname, '../build/index.html'), { hash: 'help' }); } catch {}
+    }
   });
 
   ipcMain.handle('get-save-dir', async () => {
@@ -617,6 +645,19 @@ let isDeviceMonitorSetup = false;
 function setupDeviceMonitor(win) {
   if (isDeviceMonitorSetup) return;
   const monitor = DeviceMonitor.getInstance();
+  try {
+    const store = new Store({
+      name: 'settings',
+      defaults: computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync)
+    });
+    const s = store.store;
+    const cfg = {};
+    if (typeof s.pollingInterval === 'number') cfg.pollingInterval = s.pollingInterval;
+    if (typeof s.enableADB === 'boolean') cfg.enableADB = s.enableADB;
+    if (typeof s.enableIOS === 'boolean') cfg.enableIOS = s.enableIOS;
+    if (typeof s.maxRetries === 'number') cfg.maxRetries = s.maxRetries;
+    if (Object.keys(cfg).length > 0) monitor.updateConfig(cfg);
+  } catch {}
   monitor.on('deviceStatusChanged', (event) => {
     if (win && !win.isDestroyed()) {
       win.webContents.send('device-status-changed', event);
@@ -627,7 +668,7 @@ function setupDeviceMonitor(win) {
       win.webContents.send('device-monitor-error', error.message);
     }
   });
-  monitor.start();
+  setTimeout(() => { try { monitor.start(); } catch {} }, 1500);
   isDeviceMonitorSetup = true;
 }
 
@@ -671,4 +712,43 @@ function ensureInPath(dir) {
   if (!parts.includes(dir)) {
     process.env.PATH = [dir, ...parts].join(sep);
   }
+}
+
+async function autoDetectTools(store) {
+  try {
+    let adb = '';
+    if (process.platform === 'win32') {
+      try {
+        const out = execSync('where adb', { encoding: 'utf8' });
+        adb = String(out || '').split(/\r?\n/)[0]?.trim() || '';
+      } catch {}
+    } else {
+      try {
+        const out = execSync('which adb', { encoding: 'utf8' });
+        adb = String(out || '').split(/\r?\n/)[0]?.trim() || '';
+      } catch {}
+    }
+    if (!adb) {
+      const envHome = String(process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '').trim();
+      if (envHome) {
+        const p = path.join(envHome, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb');
+        if (fs.existsSync(p)) adb = p;
+      }
+      if (!adb && process.platform === 'win32') {
+        const p = 'D\\:\\\Android\\\Sdk\\\platform-tools\\\adb.exe'.replace(/\\\\\\/g, '\\');
+        if (fs.existsSync(p)) adb = p;
+      }
+    }
+    if (adb) {
+      try { store.set('adbPath', adb); } catch {}
+      try { ensureInPath(path.dirname(adb)); } catch {}
+    }
+  } catch {}
+  try {
+    const idb = await deviceManager.getIdbPath();
+    if (idb) {
+      try { store.set('iosToolsPath', idb); } catch {}
+      try { ensureInPath(path.dirname(idb)); } catch {}
+    }
+  } catch {}
 }

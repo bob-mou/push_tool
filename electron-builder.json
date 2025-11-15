@@ -1,10 +1,9 @@
 {
   "appId": "com.filespush.app",
   "productName": "文件推送工具",
-
-
+  "version": "1.1.0",
   "directories": {
-    "output": "release-out"
+    "output": "release"
   },
   "files": [
     "build/**/*",

@@ -217,7 +217,7 @@ export function FileDropZone() {
 
   return (
     <div className="min-w-[320px] w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3">
-      <div className="max-w-l mx-auto flex flex-col min-h-[calc(100vh-24px)]">
+      <div className="w-[60vw] max-w-[60vw] mx-auto flex flex-col min-h-[calc(100vh-24px)]">
         {/* 顶部工具栏 */}
         <div className="flex justify-end items-center mb-3 electron-drag">
           <div className="flex items-center space-x-2">

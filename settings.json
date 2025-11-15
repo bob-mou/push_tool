@@ -1,4 +1,27 @@
-{
+{ 
+  "auto_start":true,
+  "push_file_temp":"D:\\WorkPlace\\files_pusher\\files_pusher_temp",
+  "message_disappear_time": 3,
   "iosToolsPath": "D:\\IOS\\idb\\idb.exe",
-  "adbPath": "D:\\Android\\Sdk\\platform-tools\\adb.exe"
+  "adbPath": "D:\\Android\\Sdk\\platform-tools\\adb.exe",
+  "default_push_target": {
+    "iosToolsPath": "D:\\IOS\\idb\\idb.exe",
+    "adbPath": "D:\\Android\\Sdk\\platform-tools\\adb.exe"
+  },
+  "current_push_target": {
+    "iosToolsPath": "D:\\IOS\\idb\\idb.exe",
+    "adbPath": "D:\\Android\\Sdk\\platform-tools\\adb.exe"
+  },
+  "record": {
+    "android": "/sdcard/Android/data/com.tencent.uc/files/BattleRecord/",
+    "ios": "/Documents/BattleRecord/"
+  },
+  "引擎": {
+    "android": "/sdcard/Android/data/com.tencent.uc/files/arm/",
+    "ios": ""
+  },
+  "引擎配置文件": {
+    "android": "/sdcard/Android/data/com.tencent.uc/files/arm/",
+    "ios": ""
+  }
 }

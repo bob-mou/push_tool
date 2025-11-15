@@ -126,7 +126,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {activeTab === 'general' && (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Play className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">开机自动启动</span>
                 </div>
@@ -170,7 +170,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       validateAdb(v);
                     }}
                     placeholder="选择adb可执行文件"
-                    className={`flex-1 px-3 py-2 rounded border ${adbValidity ? (adbValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none`}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border ${adbValidity ? (adbValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none truncate`}
                   />
                   <button
                     onClick={async () => {
@@ -194,7 +194,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center space-x-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <FileCog className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">iOS工具路径</span>
                 </div>
@@ -207,7 +207,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       validateIos(v);
                     }}
                     placeholder="选择idb可执行文件"
-                    className={`flex-1 px-3 py-2 rounded border ${iosValidity ? (iosValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none`}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border ${iosValidity ? (iosValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none truncate`}
                   />
                   <button
                     onClick={async () => {
@@ -243,7 +243,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       setLocalSettings(prev => ({ ...prev, iosBundleId: v }));
                     }}
                     placeholder="例: com.example.app"
-                    className={`flex-1 px-3 py-2 rounded border border-gray-300 focus:outline-none`}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border border-gray-300 focus:outline-none`}
                   />
                 </div>
                 <div className="text-xs text-gray-500">用于定位应用容器，例如 com.tencent.uc</div>
@@ -251,6 +251,76 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
               <div className="space-y-1.5">
                 <div className="flex items-center space-x-1.5">
+                  <FileCog className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">设备轮询间隔 (毫秒)</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <input
+                    type="number"
+                    value={Number(localSettings.pollingInterval || 0) || 5000}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value || '0', 10);
+                      setLocalSettings(prev => ({ ...prev, pollingInterval: isNaN(v) ? 5000 : v }));
+                    }}
+                    placeholder="例如 5000"
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border border-gray-300 focus:outline-none`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <Bell className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">监控 Android 设备</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localSettings.enableADB !== false}
+                    onChange={(e) => setLocalSettings(prev => ({ ...prev, enableADB: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <Bell className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">监控 iOS 设备</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localSettings.enableIOS !== false}
+                    onChange={(e) => setLocalSettings(prev => ({ ...prev, enableIOS: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center space-x-1.5">
+                  <FileCog className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">轮询失败最大重试次数</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <input
+                    type="number"
+                    value={Number(localSettings.maxRetries || 0) || 3}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value || '0', 10);
+                      setLocalSettings(prev => ({ ...prev, maxRetries: isNaN(v) ? 3 : v }));
+                    }}
+                    placeholder="例如 3"
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border border-gray-300 focus:outline-none`}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <FolderOpen className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">文件保存目录</span>
                 </div>
@@ -263,7 +333,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                       validateDir(v);
                     }}
                     placeholder="选择文件保存目录"
-                    className={`flex-1 px-3 py-2 rounded border ${dirValidity ? (dirValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none`}
+                    className={`flex-1 min-w-0 px-3 py-2 rounded border ${dirValidity ? (dirValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none truncate`}
                   />
                   <button
                     onClick={async () => {
