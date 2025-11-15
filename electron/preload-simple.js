@@ -77,6 +77,9 @@ const electronAPI = {
   saveLocalFile: (params) => {
     return ipcRenderer.invoke('save-local-file', params);
   },
+  getIdbPath: () => {
+    return ipcRenderer.invoke('get-idb-path');
+  },
   onDeviceStatusChanged: (cb) => {
     const listener = (_e, payload) => cb(payload);
     ipcRenderer.on('device-status-changed', listener);

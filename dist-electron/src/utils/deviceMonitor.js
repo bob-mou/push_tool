@@ -8,7 +8,7 @@ export class DeviceMonitor extends EventEmitter {
         this.lastKnownDevices = new Map();
         this.retryCount = 0;
         this.deviceManager = DeviceManager.getInstance();
-        this.pollingInterval = config.pollingInterval || 2000; // 默认2秒
+        this.pollingInterval = config.pollingInterval || 5000; // 默认5秒
         this.enableADB = config.enableADB !== false;
         this.enableIOS = config.enableIOS !== false;
         this.maxRetries = config.maxRetries || 3;
@@ -28,7 +28,7 @@ export class DeviceMonitor extends EventEmitter {
             return;
         }
         this.isMonitoring = true;
-        console.log('开始设备连接状态监控...');
+        console.log('[DeviceMonitor] Start monitoring device connection state...');
         // 立即执行一次检测
         this.checkDevices();
         // 设置定时轮询
@@ -44,7 +44,7 @@ export class DeviceMonitor extends EventEmitter {
             return;
         }
         this.isMonitoring = false;
-        console.log('停止设备连接状态监控');
+        console.log('[DeviceMonitor] Stop monitoring device connection state');
         if (this.pollingTimer) {
             clearInterval(this.pollingTimer);
             this.pollingTimer = null;
@@ -55,10 +55,10 @@ export class DeviceMonitor extends EventEmitter {
      */
     async checkDevices() {
         try {
-            console.log('=== 开始设备检测 ===');
-            console.log('上次已知设备:', Array.from(this.lastKnownDevices.keys()));
+            console.log('[DeviceMonitor] === Begin device check ===');
+            console.log('[DeviceMonitor] Last known devices:', Array.from(this.lastKnownDevices.keys()));
             const currentDevices = await this.deviceManager.getConnectedDevices();
-            console.log('当前检测到设备:', currentDevices.map(d => d.id));
+            console.log('[DeviceMonitor] Currently detected devices:', currentDevices.map(d => d.id));
             const currentDeviceMap = new Map();
             // 构建当前设备映射
             currentDevices.forEach(device => {
@@ -66,27 +66,27 @@ export class DeviceMonitor extends EventEmitter {
             });
             // 检查新连接的设备
             const newDevices = currentDevices.filter(device => !this.lastKnownDevices.has(device.id));
-            console.log('新连接设备:', newDevices.map(d => d.id));
+            console.log('[DeviceMonitor] Newly connected devices:', newDevices.map(d => d.id));
             newDevices.forEach(device => {
-                console.log('检测到新设备连接:', device.id);
+                console.log('[DeviceMonitor] Detected new device connection:', device.id);
                 this.emitDeviceEvent('connected', device);
             });
             // 检查断开的设备
             const disconnectedDevices = Array.from(this.lastKnownDevices.entries())
                 .filter(([deviceId]) => !currentDeviceMap.has(deviceId));
-            console.log('断开设备:', disconnectedDevices.map(([id]) => id));
+            console.log('[DeviceMonitor] Disconnected devices:', disconnectedDevices.map(([id]) => id));
             disconnectedDevices.forEach(([deviceId, device]) => {
-                console.log('检测到设备断开:', deviceId);
+                console.log('[DeviceMonitor] Detected device disconnect:', deviceId);
                 this.emitDeviceEvent('disconnected', device);
             });
             // 更新已知设备列表
             this.lastKnownDevices = currentDeviceMap;
-            console.log('更新后的已知设备:', Array.from(this.lastKnownDevices.keys()));
-            console.log('=== 设备检测完成 ===');
+            console.log('[DeviceMonitor] Updated known devices:', Array.from(this.lastKnownDevices.keys()));
+            console.log('[DeviceMonitor] === Device check completed ===');
             this.retryCount = 0; // 重置重试计数
         }
         catch (error) {
-            console.error('设备检测失败:', error);
+            console.error('[DeviceMonitor] Device check failed:', error);
             this.retryCount++;
             if (this.retryCount >= this.maxRetries) {
                 this.emit('error', new Error(`设备检测连续失败 ${this.maxRetries} 次: ${error}`));
@@ -103,7 +103,7 @@ export class DeviceMonitor extends EventEmitter {
             device,
             timestamp: Date.now()
         };
-        console.log(`设备${type === 'connected' ? '连接' : '断开'}:`, {
+        console.log(`[DeviceMonitor] Device ${type === 'connected' ? 'connected' : 'disconnected'}:`, {
             id: device.id,
             name: device.name,
             type: device.type

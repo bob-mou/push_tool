@@ -47,6 +47,7 @@ interface ElectronAPI {
   getTransferStats: () => Promise<TransferStats>;
   materializeFile: (payload: { fileName: string; data: ArrayBuffer | Uint8Array | Buffer | { type?: string; data?: number[] } }) => Promise<string | null>;
   onTransferProgress: (cb: (payload: { fileName?: string; progress: number; speedMbps?: number; etaSeconds?: number; targetPath?: string; error?: string }) => void) => void;
+  getIdbPath: () => Promise<string>;
   
   // 设备监控相关API
   startDeviceMonitoring: () => Promise<{ success: boolean }>;

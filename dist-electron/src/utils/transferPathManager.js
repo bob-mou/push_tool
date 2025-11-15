@@ -12,7 +12,7 @@ export class TransferPathManager {
 
   getDefaultPath(deviceType) {
     const defaultPaths = {
-      android: '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/',
+      android: '/sdcard/Android/media/com.tencent.uc/BattleRecord/',
       ios: '/Documents/BattleRecord/'
     };
     return defaultPaths[deviceType];

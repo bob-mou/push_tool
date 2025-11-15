@@ -29,6 +29,9 @@ interface AppState {
     notifications: boolean;
     adbPath?: string;
     saveDir?: string;
+    iosToolsPath?: string;
+    iosBundleId?: string;
+    iosIdbMode?: 'facebook' | 'i4';
   };
   
   // Actions
@@ -53,7 +56,10 @@ export const useStore = create<AppState>()(
         autoStart: true,
         notifications: true,
         adbPath: '',
-        saveDir: ''
+        saveDir: '',
+        iosToolsPath: '',
+        iosBundleId: '',
+        iosIdbMode: 'i4'
       },
       setDevices: (devices) => set({ devices }),
       setSelectedDevice: (selectedDevice) => set({ selectedDevice }),

@@ -7,21 +7,28 @@ export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
     ? 'D:\\workplace\\push_files_tool_temp'
     : path.join(docs, 'FilesPush');
   let adbPath = '';
+  let idbPath = '';
   try {
     if (platform === 'win32') {
       const out = safeExec(execSyncFn, 'where adb');
       if (out) adbPath = out.split(/\r?\n/)[0].trim();
-      // iOS 统一使用本地 idb.exe，不在此处探测
+      // 动态获取本应用目录下的 idb.exe 作为默认 idb
+      const appDir = path.dirname(process.execPath);
+      const localIdb = path.join(appDir, 'src', 'idb', 'idb.exe');
+      if (fs.existsSync(localIdb)) idbPath = localIdb;
     } else {
       const out = safeExec(execSyncFn, 'which adb');
       if (out) adbPath = out.split(/\r?\n/)[0].trim();
-      // iOS 统一使用本地 idb，不在此处探测
+      // macOS/Linux 下动态获取本应用目录下的 idb
+      const appDir = path.dirname(process.execPath);
+      const localIdb = path.join(appDir, 'src', 'idb', 'idb');
+      if (fs.existsSync(localIdb)) idbPath = localIdb;
     }
   } catch {}
   
   // 默认传输路径配置
   const defaultTransferPaths = {
-    android: '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/',
+    android: '/sdcard/Android/media/com.tencent.uc/BattleRecord/',
     ios: '/Documents/BattleRecord/'
   };
   
@@ -30,6 +37,9 @@ export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
     notifications: true,
     adbPath,
     saveDir,
+    iosToolsPath: idbPath,
+    iosBundleId: 'com.tencent.uc',
+    iosIdbMode: 'i4',
     transferPaths: defaultTransferPaths,
     autoCreateDirectories: true,
     enableTransferLogging: true,

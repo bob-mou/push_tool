@@ -36,6 +36,13 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../build/index.html'));
   }
 
+  mainWindow.once('ready-to-show', () => {
+    try {
+      mainWindow?.show();
+      mainWindow?.focus();
+    } catch {}
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

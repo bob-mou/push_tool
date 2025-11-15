@@ -26,11 +26,13 @@
    adb version
    ```
 
-### 2. iOS 工具安装（iOS 设备）
+### 2. iOS 工具安装（爱思 idb）
 
-1. 安装 iTunes（Windows 版）：
-   - 从 Microsoft Store 或 Apple 官网下载
-   ```
+1. 推荐将 `idb.exe` 放置在本应用目录 `src/idb/idb.exe`；程序会在运行时自动解析该路径，并临时加入环境变量。
+2. 设备需完成“信任此电脑”，并保持解锁状态。
+3. 验证：
+   - `idb --help` 中应包含 `devices`、`fs ls`、`fs push`
+   - `idb list` 或 `idb list --json` 应输出设备列表
 
 ## 应用安装
 
@@ -76,15 +78,12 @@ dist/文件推送工具 Setup.exe
 
 ### iOS 设备
 
-1. 连接电脑：
-   - 使用原装数据线连接
-
-2. 信任电脑：
-   - 设备上会弹出"信任此电脑"提示，点击"信任"
-   - 输入设备密码确认
-
+1. 连接电脑：使用原装数据线连接；保持设备解锁
+2. 信任电脑：设备端“信任此电脑”并输入密码确认
 3. 验证连接：
    ```bash
+   idb list
+   idb list --json
    ```
 
 ## 故障排除
@@ -101,9 +100,11 @@ adb devices
 ### iOS 设备未检测到
 
 ```bash
-# 重启服务
-net stop AppleMobileDeviceService
-net start AppleMobileDeviceService
+# 检查命令可用性
+idb --help
+idb list --json
+
+# 如仍无设备，检查数据线、USB端口，并确保设备已“信任此电脑”
 ```
 
 ### 文件推送失败

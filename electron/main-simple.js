@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { exec, execSync } from 'child_process';
+import http from 'http';
+import https from 'https';
 import Store from 'electron-store';
 import { DeviceManager } from '../dist-electron/src/utils/deviceManager.js';
 import { DeviceMonitor } from '../dist-electron/src/utils/deviceMonitor.js';
@@ -15,7 +17,7 @@ const __dirname = path.dirname(__filename);
 // 初始化设备管理器
 const deviceManager = DeviceManager.getInstance();
 
-function createWindow() {
+async function createWindow() {
   const win = new BrowserWindow({
     width: 560,
     height: 360,
@@ -30,8 +32,32 @@ function createWindow() {
     }
   });
 
-  // 加载Vite开发服务器
-  win.loadURL('http://localhost:5173');
+  const target = 'http://localhost:5173';
+  const ping = (url) => new Promise((resolve) => {
+    const lib = url.startsWith('https') ? https : http;
+    const req = lib.get(url, (res) => { try { res.destroy(); } catch {} resolve(true); });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => { try { req.destroy(); } catch {} resolve(false); });
+  });
+  const waitFor = async (url, timeout = 15000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+      const ok = await ping(url);
+      if (ok) return;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    throw new Error('dev server not ready');
+  };
+
+  try {
+    await waitFor(target);
+    console.log('[Main] Dev server ready, loading', target);
+    win.loadURL(target);
+  } catch {
+    console.log('[Main] Dev server not ready, fallback to build/index.html');
+    try { win.loadFile(path.join(__dirname, '../build/index.html')); } catch {}
+  }
+
   win.webContents.openDevTools();
 
   // 设置IPC处理程序
@@ -45,6 +71,12 @@ function setupIPC(win) {
     name: 'settings',
     defaults: computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync)
   });
+  try {
+    const v = store.get('iosBundleId');
+    if (typeof v !== 'string' || !v.trim()) {
+      store.set('iosBundleId', 'com.tencent.uc');
+    }
+  } catch {}
   const transferPathManager = TransferPathManager.getInstance();
   
 
@@ -63,7 +95,7 @@ function setupIPC(win) {
   ipcMain.handle('push-file', async (event, { deviceId, filePath, deviceType, targetDir }) => {
     try {
       const defaultDir = deviceType === 'android'
-        ? '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/'
+        ? '/sdcard/Android/media/com.tencent.uc/BattleRecord/'
         : '/Documents/BattleRecord/';
       const remoteDir = (typeof targetDir === 'string' && targetDir) ? targetDir : defaultDir;
 
@@ -77,9 +109,16 @@ function setupIPC(win) {
 
       
       if (deviceType === 'android') {
-        const ok = await execPromiseSafe(`adb -s ${deviceId} shell echo ok`);
+        const adbPath = (() => {
+          try {
+            const val = store.get('adbPath');
+            if (typeof val === 'string' && val.trim()) return val.trim();
+          } catch {}
+          return 'adb';
+        })();
+        const ok = await execPromiseSafe(`"${adbPath}" -s ${deviceId} shell echo ok`);
         if (!ok) throw new Error('ADB调试未授权或设备未连接');
-        const { stdout: df } = await execPromise(`adb -s ${deviceId} shell df -k /sdcard`);
+        const { stdout: df } = await execPromise(`"${adbPath}" -s ${deviceId} shell df -k /sdcard`);
         const m = df.match(/\s(\d+)\s+(\d+)\s+(\d+)\s+\d+%/);
         if (m) {
           const availKB = parseInt(m[3], 10);
@@ -103,19 +142,26 @@ function setupIPC(win) {
 
       
       if (deviceType === 'android') {
-        await execPromise(`adb -s ${deviceId} shell mkdir -p "${remoteDir}"`);
+        const adbPath = (() => {
+          try {
+            const val = store.get('adbPath');
+            if (typeof val === 'string' && val.trim()) return val.trim();
+          } catch {}
+          return 'adb';
+        })();
+        await execPromise(`"${adbPath}" -s ${deviceId} shell mkdir -p "${remoteDir}"`);
         const chunkSize = 8 * 1024 * 1024;
         if (fileSize <= chunkSize) {
-          await execPromise(`adb -s ${deviceId} push -a "${filePath}" "${targetPath}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} push -a "${filePath}" "${targetPath}"`);
           const d = stats.mtime;
           const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
-          await execPromise(`adb -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || adb -s ${deviceId} shell touch "${targetPath}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || "${adbPath}" -s ${deviceId} shell touch "${targetPath}"`);
         } else {
           const total = Math.ceil(fileSize / chunkSize);
           const buffer = fs.readFileSync(filePath);
           let startIndex = 0;
           try {
-            const { stdout: existing } = await exec(`adb -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
+            const { stdout: existing } = await execPromise(`"${adbPath}" -s ${deviceId} shell ls -1 "${targetPath}.part*"`);
             const lines = String(existing).split('\n').filter(Boolean);
             const idxs = lines.map(l => {
               const m = l.match(/\.part(\d+)$/);
@@ -132,7 +178,7 @@ function setupIPC(win) {
             let tries = 0;
             while (true) {
               try {
-                await execPromise(`adb -s ${deviceId} push "${tmp}" "${partRemote}"`);
+                await execPromise(`"${adbPath}" -s ${deviceId} push "${tmp}" "${partRemote}"`);
                 break;
               } catch (e) {
                 if (++tries >= 3) throw e;
@@ -146,10 +192,10 @@ function setupIPC(win) {
             sendProgress({ progress: Math.round((transferred / fileSize) * 100), speedMbps: speed, etaSeconds: eta, targetPath });
           }
           const parts = Array.from({ length: Math.ceil(fileSize / chunkSize) }, (_, i) => `${targetPath}.part${i}`).join(' ');
-          await execPromise(`adb -s ${deviceId} shell sh -c "cat ${parts} > \"${targetPath}\" && rm ${parts}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} shell sh -c "cat ${parts} > \"${targetPath}\" && rm ${parts}"`);
           const d = stats.mtime;
           const fmt = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.${String(d.getSeconds()).padStart(2,'0')}`;
-          await execPromise(`adb -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || adb -s ${deviceId} shell touch "${targetPath}"`);
+          await execPromise(`"${adbPath}" -s ${deviceId} shell toybox touch -t ${fmt} "${targetPath}" || "${adbPath}" -s ${deviceId} shell touch "${targetPath}"`);
         }
       } else {
         await deviceManager.pushFileToIOS(deviceId, filePath, remoteDir);
@@ -252,7 +298,14 @@ function setupIPC(win) {
 
   ipcMain.handle('get-settings', async () => {
     try {
-      return store.store;
+      const defaults = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
+      const s = store.store;
+      const v = typeof s.iosBundleId === 'string' ? s.iosBundleId.trim() : '';
+      if (!v) {
+        s.iosBundleId = defaults.iosBundleId;
+        try { store.set('iosBundleId', s.iosBundleId); } catch {}
+      }
+      return s;
     } catch (e) {
       return computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
     }
@@ -260,8 +313,19 @@ function setupIPC(win) {
 
   ipcMain.handle('update-settings', async (event, payload) => {
     try {
-      const next = { ...store.store, ...payload };
+      const prev = store.store;
+      const next = { ...prev, ...payload };
+      const defaults = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
+      const b = typeof next.iosBundleId === 'string' ? next.iosBundleId.trim() : '';
+      if (!b) next.iosBundleId = defaults.iosBundleId;
       store.set(next);
+      try {
+        const p = String(next?.iosToolsPath || '').trim();
+        if (p) {
+          const dir = path.dirname(p);
+          ensureInPath(dir);
+        }
+      } catch {}
       return next;
     } catch (e) {
       return store.store;
@@ -296,6 +360,15 @@ function setupIPC(win) {
       return transferPathManager.getTransferStats();
     } catch (e) {
       return { total: 0, successful: 0, failed: 0, byDeviceType: { android: 0, ios: 0 }, recent: [] };
+    }
+  });
+
+  ipcMain.handle('get-idb-path', async () => {
+    try {
+      const p = await deviceManager.getIdbPath();
+      return p || '';
+    } catch (e) {
+      return '';
     }
   });
 
@@ -549,4 +622,14 @@ function execPromise(cmd) {
       else resolve({ stdout, stderr });
     });
   });
+}
+
+function ensureInPath(dir) {
+  if (!dir) return;
+  const sep = process.platform === 'win32' ? ';' : ':';
+  const cur = String(process.env.PATH || '');
+  const parts = cur.split(sep).filter(Boolean);
+  if (!parts.includes(dir)) {
+    process.env.PATH = [dir, ...parts].join(sep);
+  }
 }

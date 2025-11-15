@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "check": "tsc -b --noEmit",
     "electron": "electron .",
+    "electron:dev": "electron .",
     "dist": "electron-builder"
   },
   "dependencies": {

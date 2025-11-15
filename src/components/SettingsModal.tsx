@@ -21,6 +21,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   useEffect(() => {
     (async () => {
       const s = await window.electronAPI.getSettings();
+      if (!s.iosToolsPath) {
+        try {
+          const p = await window.electronAPI.getIdbPath();
+          if (p) s.iosToolsPath = p;
+        } catch {}
+      }
       setLocalSettings(s);
     })();
   }, []);
@@ -187,7 +193,42 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 )}
               </div>
 
-              {/* iOS 工具路径设置已移除：程序统一使用本目录下的 idb.exe */}
+              <div className="space-y-1.5">
+                <div className="flex items-center space-x-1.5">
+                  <FileCog className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">iOS工具路径</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <input
+                    value={localSettings.iosToolsPath || ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setLocalSettings(prev => ({ ...prev, iosToolsPath: v }));
+                      validateIos(v);
+                    }}
+                    placeholder="选择idb可执行文件"
+                    className={`flex-1 px-3 py-2 rounded border ${iosValidity ? (iosValidity.valid ? 'border-green-500' : 'border-red-500') : 'border-gray-300'} focus:outline-none`}
+                  />
+                  <button
+                    onClick={async () => {
+                      const p = await window.electronAPI.selectExecutable();
+                      if (p) {
+                        setLocalSettings(prev => ({ ...prev, iosToolsPath: p }));
+                        validateIos(p);
+                      }
+                    }}
+                    className="px-3 py-1.5 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                  >
+                    浏览
+                  </button>
+                  {iosValidity && (
+                    iosValidity.valid ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />
+                  )}
+                </div>
+                {iosValidity && !iosValidity.valid && (
+                  <div className="text-xs text-red-600">{iosValidity.error}</div>
+                )}
+              </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center space-x-1.5">

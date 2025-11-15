@@ -12,9 +12,8 @@ export function DeviceSelector() {
     const raw = (device.name ?? '').trim();
     const type = String(device.type ?? '').toLowerCase();
     if (type === 'ios') {
-      const tailId = raw.match(/([A-Za-z0-9]{12,})\s*$/)?.[1];
-      const id = tailId ?? raw.replace(/.*\bDevice\b\s*/i, '').trim();
-      return id.slice(0, 16);
+      const max = 16;
+      return raw.length > max ? raw.slice(0, max) : raw;
     }
     const max = 16;
     return raw.length > max ? raw.slice(0, max) : raw;
