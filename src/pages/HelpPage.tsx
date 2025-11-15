@@ -7,11 +7,11 @@ export function HelpPage() {
         <div className="flex items-center justify-between mb-1 electron-drag">
           <div className="flex items-center space-x-2">
             <HelpCircle className="w-4 h-4 text-gray-600" />
-            <h3 className="text-base font-semibold text-gray-800">使用帮助</h3>
+            <h3 className="text-sm font-semibold text-gray-800">使用帮助</h3>
           </div>
         </div>
 
-        <div className="space-y-1.5 text-xs text-gray-700">
+        <div className="space-y-1.5 text-[11px] text-gray-700">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <Smartphone className="w-3 h-3 text-blue-600" />

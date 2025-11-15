@@ -16,11 +16,10 @@ if %errorlevel% neq 0 (
     echo 请安装Android SDK Platform Tools
 )
 
-REM 检查iOS工具是否安装
-idevice_id -h >nul 2>&1
-if %errorlevel% neq 0 (
-    echo 警告: iOS工具未安装，iOS设备支持将不可用
-    echo 请安装libimobiledevice
+REM 检查本地 idb.exe 是否存在
+if not exist "idb.exe" (
+    echo 警告: 未找到本地 idb.exe，iOS设备支持将不可用
+    echo 请将 idb.exe 放置在程序根目录
 )
 
 REM 安装依赖

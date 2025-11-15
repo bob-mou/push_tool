@@ -54,7 +54,7 @@ npm run dev
 - Windows 10/11
 - Node.js 18+
 - ADB工具（Android设备）
-- iTunes/libimobiledevice（iOS设备）
+- iTunes/IDB工具（iOS设备）
 
 ## 🎯 下一步计划
 

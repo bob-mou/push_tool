@@ -3,20 +3,19 @@ import fs from 'fs';
 
 export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
   const docs = getPathFn('documents');
-  const saveDir = path.join(docs, 'FilesPush');
+  const saveDir = platform === 'win32'
+    ? 'D:\\workplace\\push_files_tool_temp'
+    : path.join(docs, 'FilesPush');
   let adbPath = '';
-  let iosToolsPath = '';
   try {
     if (platform === 'win32') {
       const out = safeExec(execSyncFn, 'where adb');
       if (out) adbPath = out.split(/\r?\n/)[0].trim();
-      const iosOut = safeExec(execSyncFn, 'where idevice_id');
-      if (iosOut) iosToolsPath = iosOut.split(/\r?\n/)[0].trim();
+      // iOS 统一使用本地 idb.exe，不在此处探测
     } else {
       const out = safeExec(execSyncFn, 'which adb');
       if (out) adbPath = out.split(/\r?\n/)[0].trim();
-      const iosOut = safeExec(execSyncFn, 'which idevice_id');
-      if (iosOut) iosToolsPath = iosOut.split(/\r?\n/)[0].trim();
+      // iOS 统一使用本地 idb，不在此处探测
     }
   } catch {}
   
@@ -30,7 +29,6 @@ export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
     autoStart: true,
     notifications: true,
     adbPath,
-    iosToolsPath,
     saveDir,
     transferPaths: defaultTransferPaths,
     autoCreateDirectories: true,

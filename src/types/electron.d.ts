@@ -38,6 +38,7 @@ interface ElectronAPI {
   selectDirectory: () => Promise<string | null>;
   selectExecutable: () => Promise<string | null>;
   validatePath: (input: string, kind?: 'file' | 'directory') => Promise<{ valid: boolean; exists: boolean; error?: string }>;
+  getAppRoot: () => Promise<string>;
   getTransferPaths: () => Promise<TransferPathConfig>;
   updateTransferPaths: (paths: TransferPathConfig) => Promise<{ success: boolean; error?: string; paths?: TransferPathConfig }>;
   validateTransferPath: (params: { path: string; deviceType: 'android' | 'ios' }) => Promise<{ valid: boolean; error?: string }>;

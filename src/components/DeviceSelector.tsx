@@ -7,6 +7,19 @@ export function DeviceSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const formatDeviceName = (device?: any) => {
+    if (!device) return '';
+    const raw = (device.name ?? '').trim();
+    const type = String(device.type ?? '').toLowerCase();
+    if (type === 'ios') {
+      const tailId = raw.match(/([A-Za-z0-9]{12,})\s*$/)?.[1];
+      const id = tailId ?? raw.replace(/.*\bDevice\b\s*/i, '').trim();
+      return id.slice(0, 16);
+    }
+    const max = 16;
+    return raw.length > max ? raw.slice(0, max) : raw;
+  };
+
   useEffect(() => {
     refreshDevices();
     
@@ -70,10 +83,10 @@ export function DeviceSelector() {
   };
 
   return (
-    <div className="relative flex items-center space-x-2 electron-no-drag">
+    <div className="relative flex items-center electron-no-drag">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-4 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+        className="flex items-center space-x-1 px-2 py-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         disabled={devices.length === 0}
       >
         <div className={`w-3 h-3 rounded-full ${
@@ -81,7 +94,7 @@ export function DeviceSelector() {
         }`} />
         
         <span className="text-gray-700">
-          {selectedDevice ? selectedDevice.name : '选择设备'}
+          {selectedDevice ? formatDeviceName(selectedDevice) : '选择设备'}
         </span>
         
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -92,7 +105,7 @@ export function DeviceSelector() {
       {/* 刷新按钮 */}
       <button
         onClick={refreshDevices}
-        className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
+        className="ml-2 p-3 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         disabled={isRefreshing}
       >
         <RefreshCw className={`w-4 h-4 text-gray-600 ${
@@ -102,7 +115,7 @@ export function DeviceSelector() {
 
       {/* 设备下拉列表 */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-10">
+        <div className="absolute space-x-0 top-full mt-2 w-58 bg-white rounded-lg shadow-lg border z-10">
           <div className="p-2">
             {devices.length === 0 ? (
               <div className="px-3 py-2 text-gray-500 text-sm">
@@ -113,7 +126,7 @@ export function DeviceSelector() {
                 <button
                   key={device.id}
                   onClick={() => handleDeviceSelect(device)}
-                  className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 rounded-md transition-colors"
+                  className="w-full flex items-center space-x-3 py-2 text-left hover:bg-gray-50 rounded-md transition-colors"
                 >
                   <div className={`w-3 h-3 rounded-full ${
                     device.status === 'connected' ? 'bg-green-500' : 'bg-red-500'
@@ -121,7 +134,7 @@ export function DeviceSelector() {
                   
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {device.name}
+                      {formatDeviceName(device)}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
                       {device.type} • {device.status}

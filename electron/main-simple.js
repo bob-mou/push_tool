@@ -19,6 +19,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 560,
     height: 360,
+    minWidth: 320,
     frame: false,  // 移除窗口框架
     titleBarStyle: 'hidden',  // 隐藏标题栏
     resizable: true,
@@ -189,7 +190,8 @@ function setupIPC(win) {
   ipcMain.handle('materialize-file', async (event, { fileName, data }) => {
     try {
       const base = path.basename(String(fileName || 'file'));
-      const saveDir = store.get('saveDir') || path.join(app.getPath('documents'), 'FilesPush');
+      const defaultsForPlatform = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
+      const saveDir = store.get('saveDir') || defaultsForPlatform.saveDir;
       const tempDir = path.join(saveDir, '.temp');
       fs.mkdirSync(tempDir, { recursive: true });
       const out = path.join(tempDir, base);
@@ -370,6 +372,17 @@ function setupIPC(win) {
     }
   });
 
+  ipcMain.handle('get-app-root', async () => {
+    try {
+      const exeDir = path.dirname(app.getPath('exe'));
+      const devDir = path.resolve(__dirname, '..');
+      // 优先返回开发目录以便本地运行，打包后返回可执行目录
+      return process.env.NODE_ENV === 'development' ? devDir : exeDir;
+    } catch (e) {
+      return path.resolve(__dirname, '..');
+    }
+  });
+
   ipcMain.handle('validate-transfer-path', async (event, { path: input, deviceType }) => {
     try {
       if (typeof input !== 'string' || !input.trim()) return { valid: false, error: '路径不能为空' };
@@ -414,12 +427,12 @@ function setupIPC(win) {
     try {
       let dir = store.get('saveDir');
       if (typeof dir !== 'string' || !dir.trim()) {
-        dir = path.join(app.getPath('documents'), 'FilesPush');
+        dir = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync).saveDir;
       }
       fs.mkdirSync(dir, { recursive: true });
       return dir;
     } catch (e) {
-      const fallback = path.join(app.getPath('documents'), 'FilesPush');
+      const fallback = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync).saveDir;
       try { fs.mkdirSync(fallback, { recursive: true }); } catch {}
       return fallback;
     }
@@ -435,7 +448,9 @@ function setupIPC(win) {
       if (!stat.isFile()) return { success: false, error: '源路径不是文件' };
 
       let saveDir = store.get('saveDir');
-      if (typeof saveDir !== 'string' || !saveDir.trim()) saveDir = path.join(app.getPath('documents'), 'FilesPush');
+      if (typeof saveDir !== 'string' || !saveDir.trim()) {
+        saveDir = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync).saveDir;
+      }
       fs.mkdirSync(saveDir, { recursive: true });
 
       const fileName = path.basename(sourcePath);

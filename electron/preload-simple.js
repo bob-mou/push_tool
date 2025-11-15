@@ -48,6 +48,9 @@ const electronAPI = {
   openHelp: () => {
     return ipcRenderer.invoke('open-help');
   },
+  getAppRoot: () => {
+    return ipcRenderer.invoke('get-app-root');
+  },
   // 传输路径管理相关
   getTransferPaths: () => {
     return ipcRenderer.invoke('get-transfer-paths');

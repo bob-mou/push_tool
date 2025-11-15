@@ -16,11 +16,10 @@ if %errorlevel% neq 0 (
     echo Please install Android SDK Platform Tools
 )
 
-REM Check iOS tools installation
-idevice_id -h >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Warning: iOS tools not installed, iOS device support will be unavailable
-    echo Please install libimobiledevice
+REM Check local idb.exe exists
+if not exist "idb.exe" (
+    echo Warning: Local idb.exe not found, iOS device support will be unavailable
+    echo Please place idb.exe in the application root directory
 )
 
 REM Install dependencies

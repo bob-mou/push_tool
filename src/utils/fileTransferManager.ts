@@ -62,6 +62,9 @@ export class FileTransferManager {
   }
 
   private getDefaultSaveDir(): string {
+    if (process.platform === 'win32') {
+      return 'D:\\workplace\\push_files_tool_temp';
+    }
     const documentsDir = path.join(os.homedir(), 'Documents');
     return path.join(documentsDir, 'FilePush', 'ReceivedFiles');
   }

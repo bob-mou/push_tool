@@ -102,9 +102,9 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-2">
+    <div className="space-y-3">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-start space-x-1.5">
           <Info className="w-5 h-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">传输路径配置</p>
@@ -114,13 +114,13 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       </div>
 
       {/* Android路径配置 */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
+      <div className="space-y-2">
+        <div className="flex items-center space-x-1.5">
           <Smartphone className="w-5 h-5 text-green-600" />
-          <h3 className="text-lg font-medium text-gray-900">Android设备路径</h3>
+          <h3 className="text-l font-medium text-gray-900">Android设备路径</h3>
         </div>
         
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="relative">
             <input
               type="text"
@@ -156,13 +156,13 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       </div>
 
       {/* iOS路径配置 */}
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
+      <div className="space-y-2">
+        <div className="flex items-center space-x-1.5">
           <Smartphone className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-medium text-gray-900">iOS设备路径</h3>
+          <h3 className="text-l font-medium text-gray-900">iOS设备路径</h3>
         </div>
         
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="relative">
             <input
               type="text"
@@ -197,10 +197,10 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       </div>
 
       {/* 操作按钮 */}
-      <div className="flex justify-between pt-4 border-t">
+      <div className="flex justify-between pt-3 border-t">
         <button
           onClick={resetToDefault}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
         >
           恢复默认
         </button>
@@ -208,7 +208,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
         <button
           onClick={handleSave}
           disabled={!validation.android.valid || !validation.ios.valid}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           保存配置
         </button>

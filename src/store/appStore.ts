@@ -28,7 +28,6 @@ interface AppState {
     autoStart: boolean;
     notifications: boolean;
     adbPath?: string;
-    iosToolsPath?: string;
     saveDir?: string;
   };
   
@@ -54,7 +53,6 @@ export const useStore = create<AppState>()(
         autoStart: true,
         notifications: true,
         adbPath: '',
-        iosToolsPath: '',
         saveDir: ''
       },
       setDevices: (devices) => set({ devices }),

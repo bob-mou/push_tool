@@ -15,10 +15,10 @@ if ! command -v adb &> /dev/null; then
     echo "请安装Android SDK Platform Tools"
 fi
 
-# 检查iOS工具是否安装
-if ! command -v idevice_id &> /dev/null; then
-    echo "警告: iOS工具未安装，iOS设备支持将不可用"
-    echo "请安装libimobiledevice"
+# 检查本地 idb 是否存在（或命令可用）
+if [ ! -f "./idb" ] && ! command -v idb &> /dev/null; then
+    echo "警告: 未找到本地 idb 或系统命令不可用，iOS设备支持将不可用"
+    echo "请将 idb 放置在程序根目录或安装到系统路径"
 fi
 
 # 安装依赖

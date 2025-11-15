@@ -30,19 +30,6 @@
 
 1. 安装 iTunes（Windows 版）：
    - 从 Microsoft Store 或 Apple 官网下载
-
-2. 安装 libimobiledevice 工具：
-   ```bash
-   # 使用 chocolatey 安装
-   choco install libimobiledevice
-   
-   # 或手动下载安装
-   # 访问 https://github.com/libimobiledevice-win32/imobiledevice-net
-   ```
-
-3. 验证安装：
-   ```bash
-   idevice_id -h
    ```
 
 ## 应用安装
@@ -98,7 +85,6 @@ dist/文件推送工具 Setup.exe
 
 3. 验证连接：
    ```bash
-   idevice_id -l
    ```
 
 ## 故障排除

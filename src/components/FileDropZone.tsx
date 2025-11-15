@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Settings, HelpCircle } from 'lucide-react';
+import { Upload, Settings } from 'lucide-react';
 import { useStore } from '@/store/appStore';
 import { DeviceSelector } from './DeviceSelector';
 import { TransferProgress } from './TransferProgress';
@@ -216,11 +216,11 @@ export function FileDropZone() {
   }, [setTransferProgress]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-w-[320px] w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3">
+      <div className="max-w-l mx-auto flex flex-col min-h-[calc(100vh-24px)]">
         {/* 顶部工具栏 */}
-        <div className="flex justify-end items-center mb-8 electron-drag">
-          <div className="flex items-center space-x-4">
+        <div className="flex justify-end items-center mb-3 electron-drag">
+          <div className="flex items-center space-x-2">
             <div className="electron-no-drag">
               <DeviceSelector />
             </div>
@@ -234,17 +234,7 @@ export function FileDropZone() {
               <Settings className="w-5 h-5 text-gray-600" />
             </button>
 
-            <button
-              onClick={() => {
-                const api = (window as any).electronAPI;
-                if (api && api.openHelp) api.openHelp();
-                else window.location.hash = '#/help';
-              }}
-              className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow electron-no-drag"
-              title="帮助"
-            >
-              <HelpCircle className="w-5 h-5 text-gray-600" />
-            </button>
+            {/* 使用帮助入口移至设置弹窗右上角，故移除顶部帮助按钮 */}
           </div>
         </div>
 
@@ -252,12 +242,14 @@ export function FileDropZone() {
         <div
           {...getRootProps()}
           className={`
-            relative border-0 rounded-2xl p-12 text-center transition-all duration-300
+            electron-no-drag
+            relative border-0 rounded-2xl p-6 text-center transition-all duration-300
             ${isDragActive 
               ? 'border-blue-500 bg-blue-50 scale-105' 
               : 'border-gray-300 bg-white hover:border-gray-400'
             }
             ${(!selectedDevice || isTransferring) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            min-w-[90px] flex-1 flex items-center justify-center
           `}
         >
           <input {...getInputProps()} />
