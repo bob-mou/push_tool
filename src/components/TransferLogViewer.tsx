@@ -146,7 +146,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
       )}
 
       {/* 操作按钮 */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify之间 items-center">
         <h2 className="text-l font-semibold text-gray-800 flex items-center space-x-2">
           <Clock className="w-6 h-4" />
           <span>传输日志 ({logs.length}条)</span>
@@ -209,7 +209,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
                       <FileText className="w-3 h-3" />
                       <span>源: {log.sourcePath}</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
+                    <div className="flex itemscenter space-x-1.5">
                       <Smartphone className="w-3 h-3" />
                       <span>目标: {log.targetPath}</span>
                     </div>
