@@ -2,7 +2,7 @@ import { X, HelpCircle, Smartphone, Upload, Info } from 'lucide-react';
 
 export function HelpPage() {
   return (
-    <div className="min-h-screen bg-white p-0">
+    <div className="min-h-screen bg白 p-0">
       <div className="w-full h-full p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-1 electron-drag">
           <div className="flex items-center space-x-2">
@@ -21,7 +21,7 @@ export function HelpPage() {
           </div>
 
           <div className="space-y-1">
-            <div className="flex items-center space-x-2">
+            <div className="flex itemscenter space-x-2">
               <Upload className="w-3 h-3 text-green-600" />
               <span className="font-medium text-gray-800">文件传输</span>
             </div>

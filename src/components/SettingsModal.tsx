@@ -60,8 +60,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10">
-      <div className="bg-white rounded-lg w-full max-w-[90vw] sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] shadow-l flex flex-col">
+    <div className="fixed inset-0 bg黑 bg-opacity-10 flex items-center justify-center z-10">
+      <div className="bg白 rounded-lg w-full max-w-[90vw] sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] shadow-l flex flex-col">
         <div className="flex items-center justify-between p-1 electron-drag">
           <div className="flex items-center space-x-1">
             <SettingsIcon className="w-5 h-5 text-gray-600" />
@@ -70,14 +70,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           <div className="flex items-center space-x-1 electron-no-drag">
             <button
               onClick={() => setShowHelp(true)}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg灰-100 rounded"
               title="使用帮助"
             >
               <HelpCircle className="w-4 h-4 text-gray-600" />
             </button>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg灰-100 rounded"
               title="关闭"
             >
               <X className="w-3 h-3 text-gray-500" />
@@ -91,7 +91,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             onClick={() => setActiveTab('general')}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'general'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-blue-500 text蓝-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -101,7 +101,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             onClick={() => setActiveTab('paths')}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'paths'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-blue-500 text蓝-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -112,7 +112,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             onClick={() => setActiveTab('logs')}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
+                ? 'border-blue-500 text蓝-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -137,7 +137,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, autoStart: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg灰-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border白 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg白 after:border灰-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg蓝-600"></div>
                 </label>
               </div>
               <div className="flex items-center justify-between">
@@ -152,7 +152,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, notifications: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg灰-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring蓝-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border白 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg白 after:border灰-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg蓝-600"></div>
                 </label>
               </div>
 
@@ -180,7 +180,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         validateAdb(p);
                       }
                     }}
-                    className="px-3 py-1.5 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                    className="px-3 py-1.5 text-sm bg灰-100 rounded hover:bg灰-200"
                   >
                     浏览
                   </button>
@@ -217,7 +217,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         validateIos(p);
                       }
                     }}
-                    className="px-3 py-1.5 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                    className="px-3 py-1.5 text-sm bg灰-100 rounded hover:bg灰-200"
                   >
                     浏览
                   </button>
@@ -280,7 +280,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, enableADB: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg灰-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border白 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg白 after:border灰-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg蓝-600"></div>
                 </label>
               </div>
 
@@ -296,7 +296,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, enableIOS: e.target.checked }))}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg灰-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring蓝-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border白 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg白 after:border灰-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg蓝-600"></div>
                 </label>
               </div>
 
@@ -343,7 +343,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         validateDir(p);
                       }
                     }}
-                    className="px-3 py-1.5 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                    className="px-3 py-1.5 text-sm bg灰-100 rounded hover:bg灰-200"
                   >
                     浏览
                   </button>
@@ -376,7 +376,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           <div className="flex justify-between p-3 border-t bg-gray-50">
             <button
               onClick={handleReset}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors flex items-center space-x-1.5"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg灰-100 rounded-md hover:bg灰-200 transition-colors flex items-center space-x-1.5"
             >
               <RefreshCcw className="w-4 h-4" />
               <span>恢复默认</span>
@@ -385,13 +385,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             <div className="flex space-x-2">
               <button
                 onClick={onClose}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg白 border border-gray-300 rounded-md hover:bg灰-50 transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleSave}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                className="px-3 py-1.5 text-sm font-medium text白 bg蓝-600 rounded-md hover:bg蓝-700 transition-colors"
               >
                 保存
               </button>
