@@ -228,7 +228,7 @@ export function FileDropZone() {
 
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow electron-no-drag"
+              className="p-2 rounded-lg bg白 shadow-md hover:shadow-lg transition-shadow electron-no-drag"
               title="设置"
             >
               <Settings className="w-5 h-5 text-gray-600" />
@@ -274,7 +274,7 @@ export function FileDropZone() {
           </div>
           
           {isDragActive && (
-            <div className="absolute inset-0 bg-blue-100 bg-opacity-50 rounded-2xl" />
+            <div className="absolute inset-0 bg蓝-100 bg-opacity-50 rounded-2xl" />
           )}
         </div>
 

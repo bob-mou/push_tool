@@ -112,7 +112,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
           </h3>
           
           <div className="grid grid-cols-2 md:grid-cols-2 gap-1">
-            <div className="text-center">
+            <div className="text中心">
               <div className="text-2xl font-bold text-blue-200">{stats.total}</div>
               <div className="text-m text-gray-200">总传输</div>
             </div>
@@ -128,12 +128,12 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
               <div className="text-2xl font-bold text-purple-200">
                 {stats.byDeviceType.android + stats.byDeviceType.ios}
               </div>
-              <div className="text-m text-gray-200">设备数</div>
+              <div className="text-m text灰-200">设备数</div>
             </div>
           </div>
           
-          <div className="mt-2 flex justify-center space-x-3 text-sm">
-            <div className="flex items-center space-x-1">
+          <div className="mt-2 flex justify中心 space-x-3 text-sm">
+            <div className="flex items中心 space-x-1">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span>Android: {stats.byDeviceType.android}</span>
             </div>
@@ -146,7 +146,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
       )}
 
       {/* 操作按钮 */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify之间 items-center">
         <h2 className="text-l font-semibold text-gray-800 flex items-center space-x-2">
           <Clock className="w-6 h-4" />
           <span>传输日志 ({logs.length}条)</span>
@@ -162,14 +162,14 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
           
           <button
             onClick={exportLogs}
-            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg蓝-200 flex itemscenter space-x-1"
           >
             <Download className="w-4 h-4" />
           </button>
           
           <button
             onClick={clearLogs}
-            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 flex items相-1"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -209,7 +209,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
                       <FileText className="w-3 h-3" />
                       <span>源: {log.sourcePath}</span>
                     </div>
-                    <div className="flex items-center space-x-1.5">
+                    <div className="flex itemscenter space-x-1.5">
                       <Smartphone className="w-3 h-3" />
                       <span>目标: {log.targetPath}</span>
                     </div>
