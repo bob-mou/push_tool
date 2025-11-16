@@ -106,29 +106,29 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
       {/* 统计信息 */}
       {stats && (
         <div className="bg-gray-50 rounded-lg p-3">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center space-x-1.5">
-            <Smartphone className="w-5 h-5" />
+          <h3 className="text-lg font-semibold text-gray-200 mb-2 flex items-center space-x-1">
+            <Smartphone className="w-3 h-2" />
             <span>传输统计</span>
           </h3>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-1">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-600">总传输</div>
+              <div className="text-2xl font-bold text-blue-200">{stats.total}</div>
+              <div className="text-m text-gray-200">总传输</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.successful}</div>
-              <div className="text-sm text-gray-600">成功</div>
+              <div className="text-2xl font-bold text-green-200">{stats.successful}</div>
+              <div className="text-m text-gray-200">成功</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-              <div className="text-sm text-gray-600">失败</div>
+              <div className="text-2xl font-bold text-red-200">{stats.failed}</div>
+              <div className="text-m text-gray-200">失败</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-2xl font-bold text-purple-200">
                 {stats.byDeviceType.android + stats.byDeviceType.ios}
               </div>
-              <div className="text-sm text-gray-600">设备数</div>
+              <div className="text-m text-gray-200">设备数</div>
             </div>
           </div>
           
