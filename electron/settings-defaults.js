@@ -2,8 +2,8 @@ import path from 'path';
 import fs from 'fs';
 
 export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
-  const documentsDir = getPathFn('documents');
-  const saveDir = path.join(documentsDir, 'FilePush', 'ReceivedFiles');
+  const appDir = path.dirname(process.execPath);
+  const saveDir = path.join(appDir, 'PushedFiles');
   
   // 默认传输路径配置
   const defaultTransferPaths = {
@@ -13,10 +13,12 @@ export function computeDefaultSettingsFor(platform, getPathFn, execSyncFn) {
   const defaultTransferPathOptions = {
     android: [
       { name: '战报目录', path: '/sdcard/Android/media/com.tencent.uc/BattleRecord/' },
+      { name: '引擎目录', path: '/sdcard/Android/media/com.tencent.uc/BattleRecord/' },
       { name: 'UC缓存', path: '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/' }
     ],
     ios: [
       { name: '战报目录', path: '/Documents/BattleRecord/' },
+      { name: '引擎目录', path: '/sdcard/Android/media/com.tencent.uc/BattleRecord/' },
       { name: '缓存目录', path: '/Library/Caches/BattleRecord/' }
     ]
   };

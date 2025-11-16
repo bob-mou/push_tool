@@ -80,13 +80,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </button>
           <button
             onClick={() => setActiveTab('logs')}
-            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors item-center${
+            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors flex items-center justify-center ${
               activeTab === 'logs'
-                ? 'border-blue-500 text-blue-900 item-center'
-                : 'border-transparent text-gray-900 item-center hover:text-gray-900 item-center'
+                ? 'border-blue-500 text-blue-900'
+                : 'border-transparent text-gray-900 hover:text-gray-900'
             }`}
           >
-            <History className="w-4 h-4 inline mr-1 item-center" />
+            <History className="w-4 h-4 inline mr-1" />
             传输日志
           </button>
         </div>
