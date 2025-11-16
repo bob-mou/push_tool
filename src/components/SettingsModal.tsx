@@ -42,7 +42,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10">
-      <div className="bg-white rounded-lg w-full max-w-[90vw] sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] shadow-l flex flex-col">
+      <div className="bg-white rounded-lg w-full max-w-[90vw] sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-hidden shadow-l flex flex-col">
         <div className="flex items-center justify-between p-1 electron-drag">
           <div className="flex items-center space-x-1">
             <SettingsIcon className="w-5 h-5 text-gray-600" />
@@ -67,10 +67,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </div>
 
         {/* 标签页导航 */}
-        <div className="flex border-b px-3">
+        <div className="flex border-b px-3 ">
           <button
             onClick={() => setActiveTab('general')}
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors ${
               activeTab === 'general'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -80,10 +80,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </button>
           <button
             onClick={() => setActiveTab('logs')}
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors ${
               activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-blue-500 text-blue-900'
+                : 'border-transparent text-gray-900 hover:text-gray-900'
             }`}
           >
             <History className="w-4 h-4 inline mr-1" />
@@ -92,9 +92,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </div>
 
         {/* 标签页内容 */}
-        <div className="flex-1 overflow-y-auto p-3 leading-tight min-h-[320px]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-1 leading-tight">
           {activeTab === 'general' && (
-            <div className="space-y-1">
+            <div className="space-y-1 p-3 leading-tight">
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Play className="w-4 h-4 text-gray-600" />

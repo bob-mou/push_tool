@@ -30,11 +30,8 @@ export function TargetPathSelector({ onSelect }: TargetPathSelectorProps) {
   const deviceType = selectedDevice?.type || 'android';
   const list = useMemo(() => {
     const base: OptionItem[] = deviceType === 'android' ? options.android : options.ios;
-    const saved = deviceType === 'android' ? savedPaths.android : savedPaths.ios;
-    const savedItem: OptionItem | null = saved && saved.trim() ? { name: '当前保存路径', path: saved.trim() } : null;
-    const merged = savedItem ? [savedItem, ...base] : base;
-    return merged;
-  }, [deviceType, options, savedPaths]);
+    return base;
+  }, [deviceType, options]);
 
   useEffect(() => {
     const first = list[0]?.path;
@@ -51,9 +48,9 @@ export function TargetPathSelector({ onSelect }: TargetPathSelectorProps) {
     <select
       value={selectedKey}
       onChange={(e) => setSelectedKey(e.target.value)}
-      className="px-2 py-1 rounded-lg bg-white shadow-md border border-gray-200 text-sm"
+      className="px-2 py-2 rounded-lg bg-white shadow-lg border border-gray-200 text-sm"
       disabled={!selectedDevice}
-      title="选择目标目录"
+      title="目标目录"
     >
       {list.map((item) => (
         <option key={`${deviceType}-${item.name}-${item.path}`} value={item.path}>

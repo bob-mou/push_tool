@@ -225,8 +225,8 @@ export function FileDropZone() {
   }, [setTransferProgress]);
 
   return (
-    <div className="min-w-[320px] w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3">
-      <div className="w-[60vw] max-w-[60vw] m-auto flex flex-col">
+    <div className="min-w-[320px] w-full h-full min-h-0 bg-gradient-to-br from-blue-50 to-indigo-100 p-3 flex flex-col">
+      <div className="flex flex-col flex-1">
         {/* 顶部工具栏 */}
         <div className="flex justify-end items-center mb-3 electron-drag">
           <div className="flex items-center space-x-2">
@@ -255,10 +255,10 @@ export function FileDropZone() {
           {...getRootProps()}
           className={`
             electron-no-drag
-            relative border-0 rounded-2xl p-6 text-center transition-all duration-300
+            relative border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300
             ${isDragActive 
-              ? 'border-blue-500 bg-blue-50 scale-105' 
-              : 'border-gray-300 bg-white hover:border-gray-400'
+              ? 'border-blue-600 bg-blue-80 scale-105' 
+              : 'border-gray-400 bg-white hover:border-gray-400'
             }
             ${(!selectedDevice || isTransferring) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             min-w-[90px] flex-1 flex items-center justify-center

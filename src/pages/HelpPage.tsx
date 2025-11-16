@@ -2,7 +2,7 @@ import { X, HelpCircle, Smartphone, Upload, Info } from 'lucide-react';
 
 export function HelpPage() {
   return (
-    <div className="min-h-screen bg-white p-0">
+    <div className="h-full min-h-0 bg-white p-0 flex flex-col">
       <div className="w-full h-full p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-1 electron-drag">
           <div className="flex items-center space-x-2">
