@@ -31,7 +31,7 @@ export class TransferPathManager {
   // 获取设备类型的默认传输路径
   getDefaultPath(deviceType: 'android' | 'ios'): string {
     const defaultPaths = {
-      android: '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/',
+      android: '/sdcard/Android/media/com.tencent.uc/BattleRecord/',
       ios: '/Documents/BattleRecord/'
     };
     return defaultPaths[deviceType];

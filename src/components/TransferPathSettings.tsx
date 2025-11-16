@@ -81,15 +81,12 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
   };
 
   const resetToDefault = async () => {
-    const defaultPaths = {
-      android: '/sdcard/Android/data/com.tencent.uc/files/BattleRecord/',
-      ios: '/Documents/BattleRecord/'
-    };
-    setPaths(defaultPaths);
-    
-    // 验证默认路径
-    await validatePath('android', defaultPaths.android);
-    await validatePath('ios', defaultPaths.ios);
+    try {
+      const defaults = await (window as any).electronAPI.getTransferPaths();
+      setPaths(defaults);
+      await validatePath('android', (defaults as any).android);
+      await validatePath('ios', (defaults as any).ios);
+    } catch {}
   };
 
   if (loading) {

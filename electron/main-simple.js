@@ -76,9 +76,7 @@ function setupIPC(win) {
     name: 'settings',
     defaults: computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync)
   });
-  try {
-    autoDetectTools(store);
-  } catch {}
+  
   try {
     const v = store.get('iosBundleId');
     if (typeof v !== 'string' || !v.trim()) {
@@ -111,7 +109,12 @@ function setupIPC(win) {
       const defaultDir = deviceType === 'android'
         ? '/sdcard/Android/media/com.tencent.uc/BattleRecord/'
         : '/Documents/BattleRecord/';
-      const remoteDir = (typeof targetDir === 'string' && targetDir) ? targetDir : defaultDir;
+      const remoteDirRaw = (typeof targetDir === 'string' && targetDir) ? targetDir : defaultDir;
+      const check = transferPathManager.validatePath(remoteDirRaw, deviceType);
+      if (!check.valid) {
+        return { success: false, error: check.error || '目标路径无效' };
+      }
+      const remoteDir = transferPathManager.normalizePath(remoteDirRaw);
 
       
       const stats = fs.statSync(filePath);
@@ -123,13 +126,7 @@ function setupIPC(win) {
 
       
       if (deviceType === 'android') {
-        const adbPath = (() => {
-          try {
-            const val = store.get('adbPath');
-            if (typeof val === 'string' && val.trim()) return val.trim();
-          } catch {}
-          return 'adb';
-        })();
+        const adbPath = await deviceManager.ensureUsableAdbPath();
         const ok = await execPromiseSafe(`"${adbPath}" -s ${deviceId} shell echo ok`);
         if (!ok) throw new Error('ADB调试未授权或设备未连接');
         const { stdout: df } = await execPromise(`"${adbPath}" -s ${deviceId} shell df -k /sdcard`);
@@ -156,13 +153,7 @@ function setupIPC(win) {
 
       
       if (deviceType === 'android') {
-        const adbPath = (() => {
-          try {
-            const val = store.get('adbPath');
-            if (typeof val === 'string' && val.trim()) return val.trim();
-          } catch {}
-          return 'adb';
-        })();
+        const adbPath = await deviceManager.ensureUsableAdbPath();
         await execPromise(`"${adbPath}" -s ${deviceId} shell mkdir -p "${remoteDir}"`);
         const chunkSize = 8 * 1024 * 1024;
         if (fileSize <= chunkSize) {
@@ -322,10 +313,6 @@ function setupIPC(win) {
   // 检查ADB是否可用
   ipcMain.handle('check-adb', async () => {
     try {
-      const adbPath = store.get('adbPath');
-      if (adbPath && typeof adbPath === 'string' && adbPath.trim()) {
-        return await execPromiseSafe(`"${adbPath}" version`);
-      }
       const isAvailable = await deviceManager.isADBAvailable();
       return isAvailable;
     } catch (error) {
@@ -366,18 +353,7 @@ function setupIPC(win) {
       const b = typeof next.iosBundleId === 'string' ? next.iosBundleId.trim() : '';
       if (!b) next.iosBundleId = defaults.iosBundleId;
       store.set(next);
-      try {
-        const pIos = String(next?.iosToolsPath || '').trim();
-        if (pIos) {
-          const dir = path.dirname(pIos);
-          ensureInPath(dir);
-        }
-        const pAdb = String(next?.adbPath || '').trim();
-        if (pAdb) {
-          const dirA = path.dirname(pAdb);
-          ensureInPath(dirA);
-        }
-      } catch {}
+      try {} catch {}
       try {
         const monitor = DeviceMonitor.getInstance();
         const cfg = {};
@@ -452,6 +428,20 @@ function setupIPC(win) {
     }
   });
 
+  ipcMain.handle('get-transfer-path-options', async () => {
+    try {
+      const defaults = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
+      const saved = store.get('transferPathOptions');
+      if (saved && typeof saved === 'object' && Array.isArray(saved.android) && Array.isArray(saved.ios)) {
+        return saved;
+      }
+      return defaults.transferPathOptions;
+    } catch (e) {
+      const defaults = computeDefaultSettingsFor(process.platform, app.getPath.bind(app), execSync);
+      return defaults.transferPathOptions;
+    }
+  });
+
   ipcMain.handle('update-transfer-paths', async (event, paths) => {
     try {
       const a = transferPathManager.validatePath(paths?.android, 'android');
@@ -484,20 +474,7 @@ function setupIPC(win) {
     }
   });
 
-  ipcMain.handle('select-executable', async () => {
-    try {
-      const result = await dialog.showOpenDialog(win, {
-        title: '选择可执行文件',
-        properties: ['openFile']
-      });
-      if (!result.canceled && result.filePaths.length > 0) {
-        return result.filePaths[0];
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  });
+  
 
   ipcMain.handle('validate-path', async (event, { input, kind }) => {
     try {
@@ -734,7 +711,7 @@ async function autoDetectTools(store) {
         const p = path.join(envHome, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb');
         if (fs.existsSync(p)) adb = p;
       }
-      if (!adb && process.platform === 'win32') {
+      if (false && !adb && process.platform === 'win32') {
         const p = 'D\\:\\\Android\\\Sdk\\\platform-tools\\\adb.exe'.replace(/\\\\\\/g, '\\');
         if (fs.existsSync(p)) adb = p;
       }

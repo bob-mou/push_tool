@@ -27,9 +27,7 @@ interface AppState {
   settings: {
     autoStart: boolean;
     notifications: boolean;
-    adbPath?: string;
     saveDir?: string;
-    iosToolsPath?: string;
     iosBundleId?: string;
     iosIdbMode?: 'facebook' | 'i4';
     pollingInterval?: number;
@@ -59,9 +57,7 @@ export const useStore = create<AppState>()(
       settings: {
         autoStart: true,
         notifications: true,
-        adbPath: '',
         saveDir: '',
-        iosToolsPath: '',
         iosBundleId: '',
         iosIdbMode: 'i4',
         pollingInterval: 5000,

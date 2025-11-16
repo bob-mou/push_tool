@@ -41,6 +41,7 @@ export class FileTransferManager {
     this.saveDir = this.getDefaultSaveDir();
     this.tempDir = path.join(this.saveDir, '.temp');
     this.ensureDirectories();
+    this.initFromIPC();
   }
 
   /**
@@ -62,11 +63,20 @@ export class FileTransferManager {
   }
 
   private getDefaultSaveDir(): string {
-    if (process.platform === 'win32') {
-      return 'D:\\workplace\\push_files_tool_temp';
-    }
     const documentsDir = path.join(os.homedir(), 'Documents');
     return path.join(documentsDir, 'FilePush', 'ReceivedFiles');
+  }
+
+  private async initFromIPC(): Promise<void> {
+    try {
+      const api = (window as any)?.electronAPI;
+      if (api && typeof api.getSaveDir === 'function') {
+        const dir = await api.getSaveDir();
+        if (typeof dir === 'string' && dir.trim()) {
+          this.setSaveDir(dir.trim());
+        }
+      }
+    } catch {}
   }
 
   private async ensureDirectories(): Promise<void> {

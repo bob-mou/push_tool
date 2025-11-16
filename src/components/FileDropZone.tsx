@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Settings } from 'lucide-react';
 import { useStore } from '@/store/appStore';
 import { DeviceSelector } from './DeviceSelector';
+import { TargetPathSelector } from './TargetPathSelector';
 import { TransferProgress } from './TransferProgress';
 import { SettingsModal } from './SettingsModal';
  
@@ -23,6 +24,7 @@ export function FileDropZone() {
   } = useStore();
   
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedTargetDir, setSelectedTargetDir] = useState<string | undefined>(undefined);
 
   const processOne = async (file: DroppedFile, queue: DroppedFile[]) => {
     let filePath = file.path || file.name;
@@ -88,11 +90,18 @@ export function FileDropZone() {
     try {
       let targetDir: string | undefined = undefined;
       try {
-        const paths = await window.electronAPI.getTransferPaths();
-        const candidate = selectedDevice.type === 'android' ? (paths as any).android : (paths as any).ios;
-        if (typeof candidate === 'string' && candidate.trim()) {
-          const v = await window.electronAPI.validateTransferPath({ path: candidate, deviceType: selectedDevice.type });
-          if (v.valid) targetDir = candidate;
+        const primary = selectedTargetDir;
+        if (typeof primary === 'string' && primary.trim()) {
+          const v = await window.electronAPI.validateTransferPath({ path: primary, deviceType: selectedDevice.type });
+          if (v.valid) targetDir = primary;
+        }
+        if (!targetDir) {
+          const paths = await window.electronAPI.getTransferPaths();
+          const fallback = selectedDevice.type === 'android' ? (paths as any).android : (paths as any).ios;
+          if (typeof fallback === 'string' && fallback.trim()) {
+            const v2 = await window.electronAPI.validateTransferPath({ path: fallback, deviceType: selectedDevice.type });
+            if (v2.valid) targetDir = fallback;
+          }
         }
       } catch {}
 
@@ -217,12 +226,15 @@ export function FileDropZone() {
 
   return (
     <div className="min-w-[320px] w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3">
-      <div className="w-[60vw] max-w-[60vw] mx-auto flex flex-col min-h-[calc(100vh-24px)]">
+      <div className="w-[60vw] max-w-[60vw] m-auto flex flex-col">
         {/* 顶部工具栏 */}
         <div className="flex justify-end items-center mb-3 electron-drag">
           <div className="flex items-center space-x-2">
             <div className="electron-no-drag">
               <DeviceSelector />
+            </div>
+            <div className="electron-no-drag">
+              <TargetPathSelector onSelect={(p) => setSelectedTargetDir(p)} />
             </div>
             
 

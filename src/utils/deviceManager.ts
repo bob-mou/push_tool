@@ -18,6 +18,7 @@ export interface Device {
 
 export class DeviceManager {
   private static instance: DeviceManager;
+  private adbPathLogs: string[] = [];
 
   static getInstance(): DeviceManager {
     if (!DeviceManager.instance) {
@@ -30,8 +31,7 @@ export class DeviceManager {
   private async getAndroidDevices(): Promise<Device[]> {
     try {
       console.log('[DeviceManager] Start fetching Android devices...');
-      const settings = await this.getSettings();
-      const adbPath = settings.adbPath || 'adb';
+      const adbPath = await this.ensureUsableAdbPath();
       
       const { stdout } = await execPromise(`"${adbPath}" devices`);
       console.log('[DeviceManager] ADB output:', stdout);
@@ -160,9 +160,7 @@ export class DeviceManager {
   // 检查ADB是否可用
   async isADBAvailable(): Promise<boolean> {
     try {
-      const settings = await this.getSettings();
-      const adbPath = settings.adbPath || 'adb';
-      
+      const adbPath = await this.ensureUsableAdbPath();
       await execPromise(`"${adbPath}" version`);
       return true;
     } catch (error) {
@@ -219,9 +217,7 @@ export class DeviceManager {
         throw new Error('Android路径必须以/sdcard/或/storage/开头');
       }
       
-      // 获取ADB路径配置
-      const settings = await this.getSettings();
-      const adbPath = settings.adbPath || 'adb';
+      const adbPath = await this.ensureUsableAdbPath();
       console.log(`使用ADB路径: ${adbPath}`);
 
       // 首先创建远程目录（支持自动创建）
@@ -441,17 +437,8 @@ export class DeviceManager {
     const isWin = process.platform === 'win32';
     const execName = isWin ? 'idb.exe' : 'idb';
     const candidates: string[] = [];
-    try {
-      const settings = await this.getSettings();
-      const p = String(settings?.iosToolsPath || '').trim();
-      if (p) {
-        candidates.push(p);
-      }
-    } catch {}
-    try { candidates.push(path.join(process.cwd(), execName)); } catch {}
-    try { candidates.push(path.join(__dirname, '..', execName)); } catch {}
-    try { candidates.push(path.join(process.cwd(), 'idb', execName)); } catch {}
     try { candidates.push(path.join(process.cwd(), 'src', 'idb', execName)); } catch {}
+    try { candidates.push(path.join(process.cwd(), 'idb', execName)); } catch {}
     try { candidates.push(path.join(__dirname, '..', 'idb', execName)); } catch {}
     try { candidates.push(path.join(__dirname, '..', '..', 'src', 'idb', execName)); } catch {}
     try {
@@ -460,9 +447,8 @@ export class DeviceManager {
       const api = w?.electronAPI || g?.electronAPI;
       if (api && typeof api.getAppRoot === 'function') {
         const root = await api.getAppRoot();
-        candidates.push(path.join(root, execName));
-        candidates.push(path.join(root, 'idb', execName));
         candidates.push(path.join(root, 'src', 'idb', execName));
+        candidates.push(path.join(root, 'idb', execName));
       }
     } catch {}
     for (const p of candidates) {
@@ -474,8 +460,41 @@ export class DeviceManager {
         }
       } catch {}
     }
-    // 最后尝试系统路径
-    return execName;
+    throw new Error('IDB工具不可用');
+  }
+
+  private async ensureUsableAdbPath(): Promise<string> {
+    const isWin = process.platform === 'win32';
+    const execName = isWin ? 'adb.exe' : 'adb';
+    const candidates: string[] = [];
+    try { candidates.push(path.join(process.cwd(), 'src', 'adb', execName)); } catch {}
+    try { candidates.push(path.join(process.cwd(), 'adb', execName)); } catch {}
+    try { candidates.push(path.join(__dirname, '..', 'adb', execName)); } catch {}
+    try { candidates.push(path.join(__dirname, '..', '..', 'src', 'adb', execName)); } catch {}
+    try {
+      const w = (globalThis as any).window;
+      const g = (globalThis as any).global || globalThis;
+      const api = w?.electronAPI || g?.electronAPI;
+      if (api && typeof api.getAppRoot === 'function') {
+        const root = await api.getAppRoot();
+        candidates.push(path.join(root, 'src', 'adb', execName));
+        candidates.push(path.join(root, 'adb', execName));
+      }
+    } catch {}
+    for (const p of candidates) {
+      try {
+        if (p && fs.existsSync(p) && fs.statSync(p).isFile()) {
+          const dir = path.dirname(p);
+          this.ensureInPath(dir);
+          return p.replace(/\\/g, '/');
+        }
+      } catch {}
+    }
+    throw new Error('ADB工具不可用');
+  }
+
+  private async ensureUsableIdbPath(): Promise<string> {
+    return await this.getIdbPath();
   }
 
 
@@ -492,7 +511,8 @@ export class DeviceManager {
   // 安装APK到Android设备
   async installAPK(deviceId: string, apkPath: string): Promise<void> {
     try {
-      await execPromise(`adb -s ${deviceId} install -r "${apkPath}"`);
+      const adbPath = await this.ensureUsableAdbPath();
+      await execPromise(`"${adbPath}" -s ${deviceId} install -r "${apkPath}"`);
       console.log(`APK安装成功: ${apkPath}`);
     } catch (error) {
       console.error('APK安装失败:', error);
@@ -503,12 +523,13 @@ export class DeviceManager {
   // 获取设备屏幕截图
   async takeScreenshot(deviceId: string, outputPath: string): Promise<void> {
     try {
+      const adbPath = await this.ensureUsableAdbPath();
       const timestamp = Date.now();
       const tempPath = `/sdcard/screenshot_${timestamp}.png`;
       
-      await execPromise(`adb -s ${deviceId} shell screencap -p ${tempPath}`);
-      await execPromise(`adb -s ${deviceId} pull ${tempPath} "${outputPath}"`);
-      await execPromise(`adb -s ${deviceId} shell rm ${tempPath}`);
+      await execPromise(`"${adbPath}" -s ${deviceId} shell screencap -p ${tempPath}`);
+      await execPromise(`"${adbPath}" -s ${deviceId} pull ${tempPath} "${outputPath}"`);
+      await execPromise(`"${adbPath}" -s ${deviceId} shell rm ${tempPath}`);
       
       console.log(`截图保存成功: ${outputPath}`);
     } catch (error) {

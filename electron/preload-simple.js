@@ -39,9 +39,6 @@ const electronAPI = {
   selectDirectory: () => {
     return ipcRenderer.invoke('select-directory');
   },
-  selectExecutable: () => {
-    return ipcRenderer.invoke('select-executable');
-  },
   validatePath: (input, kind) => {
     return ipcRenderer.invoke('validate-path', { input, kind });
   },
@@ -54,6 +51,9 @@ const electronAPI = {
   // 传输路径管理相关
   getTransferPaths: () => {
     return ipcRenderer.invoke('get-transfer-paths');
+  },
+  getTransferPathOptions: () => {
+    return ipcRenderer.invoke('get-transfer-path-options');
   },
   updateTransferPaths: (paths) => {
     return ipcRenderer.invoke('update-transfer-paths', paths);
