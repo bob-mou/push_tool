@@ -114,7 +114,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       <div className="space-y-2">
         <div className="flex items-center space-x-1.5">
           <Smartphone className="w-5 h-5 text绿-600" />
-          <h3 className="text-l font-medium text灰-900">Android设备路径</h3>
+          <h3 className="text-l font-medium text-gray-900">Android设备路径</h3>
         </div>
         
         <div className="space-y-1.5">
@@ -125,10 +125,10 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
               onChange={(e) => handlePathChange('android', e.target.value)}
               placeholder="/sdcard/Android/data/com.tencent.uc/files/BattleRecord/"
               className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring蓝-500 focus:border蓝-500 ${
-                validation.android.valid ? 'border灰-300' : 'border红-300'
+                validation.android.valid ? 'border-gray-300' : 'border红-300'
               }`}
             />
-            <Folder className="absolute left-3 top-2.5 w-4 h-4 text灰-400" />
+            <Folder className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             
             {validation.android.valid ? (
               <CheckCircle className="absolute right-3 top-2.5 w-4 h-4 text绿-500" />
@@ -144,9 +144,9 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
             </p>
           )}
           
-          <div className="text-xs text灰-500 space-y-1">
-            <p>• 路径必须以 <code className="bg灰-100 px-1 rounded">/sdcard/</code> 或 <code className="bg灰-100 px-1 rounded">/storage/</code> 开头</p>
-            <p>• 确保应用包名正确: <code className="bg灰-100 px-1 rounded">com.tencent.uc</code></p>
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>• 路径必须以 <code className="bg-gray-100 px-1 rounded">/sdcard/</code> 或 <code className="bg-gray-100 px-1 rounded">/storage/</code> 开头</p>
+            <p>• 确保应用包名正确: <code className="bg-gray-100 px-1 rounded">com.tencent.uc</code></p>
             <p>• 需要外部存储写入权限</p>
           </div>
         </div>
@@ -156,7 +156,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       <div className="space-y-2">
         <div className="flex items-center space-x-1.5">
           <Smartphone className="w-5 h-5 text蓝-600" />
-          <h3 className="text-l font-medium text灰-900">iOS设备路径</h3>
+          <h3 className="text-l font-medium text-gray-900">iOS设备路径</h3>
         </div>
         
         <div className="space-y-1.5">
@@ -167,10 +167,10 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
               onChange={(e) => handlePathChange('ios', e.target.value)}
               placeholder="/Documents/BattleRecord/"
               className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring蓝-500 focus:border蓝-500 ${
-                validation.ios.valid ? 'border灰-300' : 'border红-300'
+                validation.ios.valid ? 'border-gray-300' : 'border红-300'
               }`}
             />
-            <Folder className="absolute left-3 top-2.5 w-4 h-4 text灰-400" />
+            <Folder className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             
             {validation.ios.valid ? (
               <CheckCircle className="absolute right-3 top-2.5 w-4 h-4 text绿-500" />
@@ -186,8 +186,8 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
             </p>
           )}
           
-          <div className="text-xs text灰-500 space-y-1">
-            <p>• 路径必须以 <code className="bg灰-100 px-1 rounded">/Documents/</code> 或 <code className="bg灰-100 px-1 rounded">/Library/</code> 开头</p>
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>• 路径必须以 <code className="bg-gray-100 px-1 rounded">/Documents/</code> 或 <code className="bg-gray-100 px-1 rounded">/Library/</code> 开头</p>
             <p>• 确保应用具有适当的文件访问权限</p>
           </div>
         </div>
@@ -197,7 +197,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
       <div className="flex justify-between  pt-3 border-t">
         <button
           onClick={resetToDefault}
-          className="px-3 py-1.5 text-sm font-medium text灰-700 bg灰-100 rounded-md hover:bg灰-200 transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
         >
           恢复默认
         </button>
@@ -205,7 +205,7 @@ export function TransferPathSettings({ onPathsChange }: TransferPathSettingsProp
         <button
           onClick={handleSave}
           disabled={!validation.android.valid || !validation.ios.valid}
-          className="px-3 py-1.5 text-sm font-medium text白 bg蓝-600 rounded-md hover:bg蓝-700 disabled:bg灰-400 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-white bg蓝-600 rounded-md hover:bg蓝-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           保存配置
         </button>

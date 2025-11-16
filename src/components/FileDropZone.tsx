@@ -240,7 +240,7 @@ export function FileDropZone() {
 
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 rounded-lg bg白 shadow-md hover:shadow-lg transition-shadow electron-no-drag"
+              className="p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow electron-no-drag"
               title="设置"
             >
               <Settings className="w-5 h-5 text-gray-600" />

@@ -146,30 +146,30 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
       )}
 
       {/* 操作按钮 */}
-      <div className="flex justify之间 items-center">
+      <div className="flex justify-between items-center">
         <h2 className="text-l font-semibold text-gray-800 flex items-center space-x-2">
           <Clock className="w-6 h-4" />
           <span>传输日志 ({logs.length}条)</span>
         </h2>
         
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 ml-auto">
           <button
             onClick={loadTransferData}
-            className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-gray-150 text-gray-700 rounded hover:bg-gray-600 flex items-center space-x-1"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           
           <button
             onClick={exportLogs}
-            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-blue-150 text-blue-700 rounded hover:bg-blue-600 flex items-center space-x-1"
           >
             <Download className="w-4 h-4" />
           </button>
           
           <button
             onClick={clearLogs}
-            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-red-150 text-red-700 rounded hover:bg-red-600 flex items-center space-x-1"
           >
             <Trash2 className="w-4 h-4" />
           </button>
