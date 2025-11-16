@@ -205,16 +205,16 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
                   </div>
                   
                   <div className="text-sm text-gray-600 space-y-1 break-all">
-                    <div className="flex items-center space-x-1.5">
-                      <FileText className="w-3 h-3" />
-                      <span>源: {log.sourcePath}</span>
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h4 text-gray-500" />
+                      <span>源地址: {log.sourcePath}</span>
                     </div>
-                    <div className="flex itemscenter space-x-1.5">
-                      <Smartphone className="w-3 h-3" />
-                      <span>目标: {log.targetPath}</span>
+                    <div className="flex items-center space-x-2">
+                      <Smartphone className="w-4 h-4 text-gray-500" />
+                      <span>目标地址: {log.targetPath}</span>
                     </div>
                     {log.fileSize && (
-                      <div className="text-xs text-gray-500 break-all">
+                      <div className="text-x text-gray-500 break-all">
                         大小: {formatFileSize(log.fileSize)}
                         {log.duration && (
                           <span className="ml-2">用时: {formatDuration(log.duration)}</span>

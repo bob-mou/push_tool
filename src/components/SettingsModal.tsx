@@ -48,20 +48,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             <SettingsIcon className="w-5 h-5 text-gray-600" />
             <h2 className="text-lg font-semibold text-gray-800">设置</h2>
           </div>
-          <div className="flex items-center space-x-1 electron-no-drag">
+          <div className="flex items-center space-x-4 electron-no-drag -ml-3">
             <button
               onClick={() => setShowHelp(true)}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="w-5 h-5 hover:bg-gray-100"
               title="使用帮助"
             >
-              <HelpCircle className="w-4 h-4 text-gray-600" />
+              <HelpCircle className="w-5 h-5 text-gray-600" />
             </button>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="w-8 h-8 hover:bg-gray-100"
               title="关闭"
             >
-              <X className="w-3 h-3 text-gray-500" />
+              <X className="w-8 h-8 text-gray-600" />
             </button>
           </div>
         </div>
@@ -80,13 +80,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           </button>
           <button
             onClick={() => setActiveTab('logs')}
-            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 text-lg font-medium border-b-2 transition-colors item-center${
               activeTab === 'logs'
-                ? 'border-blue-500 text-blue-900'
-                : 'border-transparent text-gray-900 hover:text-gray-900'
+                ? 'border-blue-500 text-blue-900 item-center'
+                : 'border-transparent text-gray-900 item-center hover:text-gray-900 item-center'
             }`}
           >
-            <History className="w-4 h-4 inline mr-1" />
+            <History className="w-4 h-4 inline mr-1 item-center" />
             传输日志
           </button>
         </div>
