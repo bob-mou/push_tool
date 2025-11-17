@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Settings } from 'lucide-react';
 import { useStore } from '@/store/appStore';
 import { DeviceSelector } from './DeviceSelector';
 import { TargetPathSelector } from './TargetPathSelector';
-import { TransferProgress } from './TransferProgress';
-import { SettingsModal } from './SettingsModal';
+const TransferProgress = lazy(() => import('./TransferProgress').then(m => ({ default: m.TransferProgress })));
+const SettingsModal = lazy(() => import('./SettingsModal').then(m => ({ default: m.SettingsModal })));
  
  
 
@@ -291,11 +291,19 @@ export function FileDropZone() {
         </div>
 
         {/* 传输进度显示 */}
-        {isTransferring && <TransferProgress />}
+        {isTransferring && (
+          <Suspense fallback={<div className="p-2 text-gray-500">加载进度...</div>}>
+            <TransferProgress />
+          </Suspense>
+        )}
       </div>
 
       {/* 模态框 */}
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && (
+        <Suspense fallback={<div className="p-4 text-gray-600">加载设置...</div>}>
+          <SettingsModal onClose={() => setShowSettings(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { X, Settings as SettingsIcon, Bell, Play, FolderOpen, FileCog, RefreshCcw, CheckCircle2, XCircle, Route, History, HelpCircle } from 'lucide-react';
 import { useStore } from '@/store/appStore';
-import { TransferLogViewer } from './TransferLogViewer';
-import { HelpModal } from './HelpModal';
+const TransferLogViewer = lazy(() => import('./TransferLogViewer').then(m => ({ default: m.TransferLogViewer })));
+const HelpModal = lazy(() => import('./HelpModal').then(m => ({ default: m.HelpModal })));
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -259,7 +259,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           
 
           {activeTab === 'logs' && (
-            <TransferLogViewer onClose={onClose} />
+            <Suspense fallback={<div className="p-3 text-gray-600">加载日志...</div>}>
+              <TransferLogViewer onClose={onClose} />
+            </Suspense>
           )}
         </div>
 
@@ -290,7 +292,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
             </div>
           </div>
         )}
-        {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+        {showHelp && (
+          <Suspense fallback={<div className="p-4 text-gray-600">加载帮助...</div>}>
+            <HelpModal onClose={() => setShowHelp(false)} />
+          </Suspense>
+        )}
       </div>
     </div>
   );

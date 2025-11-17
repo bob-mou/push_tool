@@ -1,7 +1,6 @@
 {
   "appId": "com.filespush.app",
   "productName": "文件推送工具",
-  "version": "1.1.0",
   "directories": {
     "output": "release"
   },
@@ -9,8 +8,25 @@
     "build/**/*",
     "electron/**/*",
     "dist-electron/**/*",
-    "node_modules/**/*",
     "package.json"
+  ],
+  "asar": true,
+  "compression": "maximum",
+  "asarUnpack": [
+    "src/adb/**",
+    "src/idb/**"
+  ],
+  "extraResources": [
+    {
+      "from": "src/adb",
+      "to": "resources/adb",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "src/idb",
+      "to": "resources/idb",
+      "filter": ["**/*"]
+    }
   ],
   "extraMetadata": {
     "main": "electron/main-simple.js"
@@ -18,7 +34,6 @@
   "electronVersion": "33.2.0",
   "win": {
     "target": "nsis",
-    "icon": "build/icon.ico",
     "executableName": "files-push"
   },
   "nsis": {
