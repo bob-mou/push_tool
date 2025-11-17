@@ -54,7 +54,7 @@ export function TransferProgress() {
   }, [status, settings.notifications, fileName]);
 
   return (
-    <div className="fixed inset-0 bg黑 bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
         <div className="flex items-center justify-between mb-4 electron-drag">
           <h3 className="text-lg font-semibold text-gray-800">文件传输</h3>
@@ -79,7 +79,7 @@ export function TransferProgress() {
           )}
           
           {status === 'uploading' && (
-            <div className="w-full bg灰-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-300 ${getStatusColor()}`}
                 style={{ width: `${progress}%` }}
@@ -90,7 +90,7 @@ export function TransferProgress() {
           {status === 'completed' && (
             <div className="flex items-center space-x-2 text-green-600">
               <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text白" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -104,7 +104,7 @@ export function TransferProgress() {
           {status === 'error' && (
             <div className="flex items-center space-x-2 text-red-600">
               <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text白" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </div>

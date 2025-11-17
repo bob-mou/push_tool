@@ -1,0 +1,8 @@
+version: 1.1.0
+files:
+  - url: files_push-setup-1.1.0.exe
+    sha512: IPM5cpkX3ConK0fFHgHk/BorZeD4r6Ma2TorSo4WlgKO4/+rGO8k2l2OCa5tUBh4vY1cC0MGdnGOZdZX+mhCvg==
+    size: 159680791
+path: files_push-setup-1.1.0.exe
+sha512: IPM5cpkX3ConK0fFHgHk/BorZeD4r6Ma2TorSo4WlgKO4/+rGO8k2l2OCa5tUBh4vY1cC0MGdnGOZdZX+mhCvg==
+releaseDate: '2025-11-17T06:16:31.749Z'

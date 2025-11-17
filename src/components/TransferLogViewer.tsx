@@ -114,21 +114,21 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
           <div className="flex flex-row flex-nowrap gap-x-2">
             <div className="flex-1 text-center">
               <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-m text-gray-600">总传输</div>
+              <div className="text-sm text-gray-600">总传输</div>
             </div>
             <div className="flex-1 text-center">
               <div className="text-2xl font-bold text-green-600">{stats.successful}</div>
-              <div className="text-m text-gray-600">成功</div>
+              <div className="text-sm text-gray-600">成功</div>
             </div>
             <div className="flex-1 text-center">
               <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-              <div className="text-m text-gray-600">失败</div>
+              <div className="text-sm text-gray-600">失败</div>
             </div>
             <div className="flex-1 text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {stats.byDeviceType.android + stats.byDeviceType.ios}
               </div>
-              <div className="text-m text-gray-600">设备数</div>
+              <div className="text-sm text-gray-600">设备数</div>
             </div>
           </div>
           
@@ -146,8 +146,8 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
       )}
 
       {/* 操作按钮 */}
-      <div className="flex justify之间 items-center">
-        <h2 className="text-l font-semibold text-gray-800 flex items-center space-x-2">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
           <Clock className="w-6 h-4" />
           <span>传输日志 ({logs.length}条)</span>
         </h2>
@@ -155,21 +155,21 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
         <div className="flex space-x-2 ml-auto">
           <button
             onClick={loadTransferData}
-            className="px-3 py-1 text-sm bg-gray-150 text-gray-700 rounded hover:bg-gray-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-600 flex items-center space-x-1"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           
           <button
             onClick={exportLogs}
-            className="px-3 py-1 text-sm bg-blue-150 text-blue-700 rounded hover:bg-blue-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-600 flex items-center space-x-1"
           >
             <Download className="w-4 h-4" />
           </button>
           
           <button
             onClick={clearLogs}
-            className="px-3 py-1 text-sm bg-red-150 text-red-700 rounded hover:bg-red-600 flex items-center space-x-1"
+            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-600 flex items-center space-x-1"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -206,7 +206,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
                   
                   <div className="text-sm text-gray-600 space-y-1 break-all">
                     <div className="flex items-center space-x-2">
-                      <FileText className="w-4 h4 text-gray-500" />
+                      <FileText className="w-4 h-4 text-gray-500" />
                       <span>源地址: {log.sourcePath}</span>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -214,7 +214,7 @@ export function TransferLogViewer({ onClose }: TransferLogViewerProps) {
                       <span>目标地址: {log.targetPath}</span>
                     </div>
                     {log.fileSize && (
-                      <div className="text-x text-gray-500 break-all">
+                      <div className="text-xs text-gray-500 break-all">
                         大小: {formatFileSize(log.fileSize)}
                         {log.duration && (
                           <span className="ml-2">用时: {formatDuration(log.duration)}</span>

@@ -286,8 +286,7 @@ export function FileDropZone() {
           </div>
           
           {isDragActive && (
-            <div className="absolute inset-0 bg蓝-100 bg-opacity-50 rounded-2xl" />
-            <div className="absolute inset-0 bg蓝-100 bg-opacity-50 rounded-2xl" />
+            <div className="absolute inset-0 bg-blue-100 bg-opacity-50 rounded-2xl" />
           )}
         </div>
 

@@ -1,4 +1,4 @@
-import { X, HelpCircle, Smartphone, Upload, Info } from 'lucide-react';
+import { HelpCircle, Smartphone, Upload, Info } from 'lucide-react';
 
 export function HelpPage() {
   return (
@@ -21,25 +21,13 @@ export function HelpPage() {
           </div>
 
           <div className="space-y-1">
-            <div className="flex itemscenter space-x-2">
-            <div className="flex itemscenter space-x-2">
+            <div className="flex items-center space-x-2">
               <Upload className="w-3 h-3 text-green-600" />
               <span className="font-medium text-gray-800">文件传输</span>
             </div>
             <p>拖拽文件到主界面的拖拽区域，或点击区域选择文件。文件将自动推送到手机的指定目录。</p>
           </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <Info className="w-3 h-3 text-purple-600" />
-              <span className="font-medium text-gray-800">目标路径</span>
-            </div>
-            <div className="bg-gray-50 p-1.5 rounded-md space-y-0.5">
-              <p><strong>Android:</strong> /sdcard/Android/data/com.tencent.uc/files/BattleRecord/</p>
-              <p><strong>iOS:</strong> /Documents/BattleRecord/</p>
-            </div>
-          </div>
-
+          
           <div className="space-y-1">
             <span className="font-medium text-gray-800">注意事项</span>
             <ul className="list-disc list-inside space-y-0.5">
@@ -49,9 +37,8 @@ export function HelpPage() {
               <li>传输过程中请勿断开设备连接</li>
             </ul>
           </div>
-        </div>
 
-        
+        </div>
       </div>
     </div>
   );
