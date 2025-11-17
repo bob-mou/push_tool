@@ -22,6 +22,7 @@ export function HelpPage() {
 
           <div className="space-y-1">
             <div className="flex itemscenter space-x-2">
+            <div className="flex itemscenter space-x-2">
               <Upload className="w-3 h-3 text-green-600" />
               <span className="font-medium text-gray-800">文件传输</span>
             </div>

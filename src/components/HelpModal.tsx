@@ -14,7 +14,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded electron-no-drag"
+            className="p-1 hover:bg灰-100 rounded electron-no-drag"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -24,6 +24,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Smartphone className="w-4 h-4 text蓝-600" />
+              <Smartphone className="w-4 h-4 text蓝-600" />
               <span className="font-medium text-gray-800">设备连接</span>
             </div>
             <p>确保您的手机已通过USB连接到电脑，并且已开启USB调试模式。</p>
@@ -31,6 +32,7 @@ export function HelpModal({ onClose }: HelpModalProps) {
 
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
+              <Upload className="w-4 h-4 text绿-600" />
               <Upload className="w-4 h-4 text绿-600" />
               <span className="font-medium text-gray-800">文件传输</span>
             </div>
@@ -40,9 +42,10 @@ export function HelpModal({ onClose }: HelpModalProps) {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Info className="w-4 h-4 text紫-600" />
+              <Info className="w-4 h-4 text紫-600" />
               <span className="font-medium text-gray-800">目标路径</span>
             </div>
-            <div className="bg-gray-50 p-3 rounded-md space-y-1">
+            <div className="bg灰-50 p-3 rounded-md space-y-1">
               <p><strong>Android:</strong> /sdcard/Android/data/com.tencent.uc/files/BattleRecord/</p>
               <p><strong>iOS:</strong> /Documents/BattleRecord/</p>
             </div>
